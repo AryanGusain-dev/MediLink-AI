@@ -11,6 +11,7 @@ export function Widget({
   action,
   children,
   className,
+  id,
   delay = 0,
 }: {
   title?: string;
@@ -18,10 +19,12 @@ export function Widget({
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
   delay?: number;
 }) {
   return (
     <motion.div
+      id={id}
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}

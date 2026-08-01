@@ -4,14 +4,13 @@ const STORAGE_KEY = "medilink-theme";
 
 export type Theme = "light" | "dark";
 
-/** Lightweight theme controller. Dark-mode ready across the whole app. */
+/** Lightweight theme controller. Light is the default unless the user has chosen a theme. */
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
-    const initial: Theme =
-      stored ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const initial: Theme = stored === "dark" || stored === "light" ? stored : "light";
     setThemeState(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
   }, []);
@@ -23,4 +22,9 @@ export function useTheme() {
   };
 
   return { theme, setTheme, toggle: () => setTheme(theme === "dark" ? "light" : "dark") };
+}
+
+export function resetThemeToLight() {
+  window.localStorage.setItem(STORAGE_KEY, "light");
+  document.documentElement.classList.remove("dark");
 }

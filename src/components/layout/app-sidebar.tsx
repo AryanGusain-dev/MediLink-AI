@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   QrCode,
   ScanLine,
-  Settings,
   Share2,
   UserRound,
 } from "lucide-react";
@@ -29,13 +28,12 @@ import { storage } from "@/data/mock";
 
 const mainNav = [
   { label: "Overview", to: "/dashboard", icon: LayoutDashboard, exact: true },
-  { label: "Profile", to: "/dashboard/profile", icon: UserRound },
+  { label: "Patient Passport", to: "/dashboard/profile", icon: UserRound },
   { label: "Documents", to: "/dashboard/documents", icon: FileText },
   { label: "Report Scanner", to: "/dashboard/scanner", icon: ScanLine },
   { label: "Share Profiles", to: "/dashboard/share", icon: Share2 },
   { label: "QR Codes", to: "/dashboard/qr", icon: QrCode },
   { label: "Notifications", to: "/dashboard/notifications", icon: Bell },
-  { label: "Settings", to: "/dashboard/settings", icon: Settings },
 ] as const;
 
 export function AppSidebar() {
