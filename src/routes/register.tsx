@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -40,14 +41,42 @@ function RegisterPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+
+    const elements = e.currentTarget.elements;
+    const name = (elements.namedItem("name") as HTMLInputElement).value;
+    const email = (elements.namedItem("email") as HTMLInputElement).value;
+    const phone = (elements.namedItem("phone") as HTMLInputElement).value;
+    const password = (elements.namedItem("password") as HTMLInputElement).value;
+    const confirm = (elements.namedItem("confirm") as HTMLInputElement).value;
+
+    if (password !== confirm) {
+      toast.error("Passwords do not match");
       setLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          phone: phone,
+        },
+      },
+    });
+
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
       toast.success("Account created — welcome to MediLink AI");
       navigate({ to: "/dashboard" });
-    }, 1000);
+    }
   };
 
   return (

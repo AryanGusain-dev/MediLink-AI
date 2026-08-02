@@ -1,9 +1,23 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { DashboardTopbar } from "@/components/layout/dashboard-topbar";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/dashboard")({
+  beforeLoad: async ({ location }) => {
+    // In SSR environment this will need cookies, but for this client-side 
+    // integration we'll rely on the local session.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: location.pathname,
+        },
+      });
+    }
+  },
   component: DashboardLayout,
 });
 

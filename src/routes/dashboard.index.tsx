@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   Activity as ActivityIcon,
@@ -21,8 +21,20 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { activities, currentUser, documents, healthProfile, notifications, qrCodes, shareProfiles, storage } from "@/data/mock";
 import { formatDate, formatRelative, formatSize } from "@/lib/format";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/dashboard/")({
+  beforeLoad: async () => {
+    // Check if first-time user; redirect to onboarding if onboarding not yet completed.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const key = `medilink_onboarding_done_${session.user.id}`;
+      const done = localStorage.getItem(key);
+      if (!done) {
+        throw redirect({ to: "/dashboard/onboarding/" });
+      }
+    }
+  },
   head: () => ({
     meta: [
       { title: "Dashboard — MediLink AI" },

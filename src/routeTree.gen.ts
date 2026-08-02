@@ -18,11 +18,14 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardDocumentsRouteImport } from './routes/dashboard.documents'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
+import { Route as DashboardOnboardingRouteImport } from './routes/dashboard.onboarding'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardQrRouteImport } from './routes/dashboard.qr'
 import { Route as DashboardScannerRouteImport } from './routes/dashboard.scanner'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardShareRouteImport } from './routes/dashboard.share'
+import { Route as DashboardOnboardingIndexRouteImport } from './routes/dashboard.onboarding.index'
+import { Route as DashboardOnboardingFillRouteImport } from './routes/dashboard.onboarding.fill'
 import { Route as DashboardSoonSlugRouteImport } from './routes/dashboard.soon.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -70,6 +73,11 @@ const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardOnboardingRoute = DashboardOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -95,6 +103,17 @@ const DashboardShareRoute = DashboardShareRouteImport.update({
   path: '/share',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardOnboardingIndexRoute =
+  DashboardOnboardingIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => DashboardOnboardingRoute,
+  } as any)
+const DashboardOnboardingFillRoute = DashboardOnboardingFillRouteImport.update({
+  id: '/fill',
+  path: '/fill',
+  getParentRoute: () => DashboardOnboardingRoute,
+} as any)
 const DashboardSoonSlugRoute = DashboardSoonSlugRouteImport.update({
   id: '/soon/$slug',
   path: '/soon/$slug',
@@ -110,13 +129,16 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard/documents': typeof DashboardDocumentsRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/onboarding': typeof DashboardOnboardingRouteWithChildren
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/qr': typeof DashboardQrRoute
   '/dashboard/scanner': typeof DashboardScannerRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/share': typeof DashboardShareRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/onboarding/fill': typeof DashboardOnboardingFillRoute
   '/dashboard/soon/$slug': typeof DashboardSoonSlugRoute
+  '/dashboard/onboarding/': typeof DashboardOnboardingIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -132,7 +154,9 @@ export interface FileRoutesByTo {
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/share': typeof DashboardShareRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/onboarding/fill': typeof DashboardOnboardingFillRoute
   '/dashboard/soon/$slug': typeof DashboardSoonSlugRoute
+  '/dashboard/onboarding': typeof DashboardOnboardingIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -144,13 +168,16 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/dashboard/documents': typeof DashboardDocumentsRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
+  '/dashboard/onboarding': typeof DashboardOnboardingRouteWithChildren
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/qr': typeof DashboardQrRoute
   '/dashboard/scanner': typeof DashboardScannerRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/share': typeof DashboardShareRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/onboarding/fill': typeof DashboardOnboardingFillRoute
   '/dashboard/soon/$slug': typeof DashboardSoonSlugRoute
+  '/dashboard/onboarding/': typeof DashboardOnboardingIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -163,13 +190,16 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/dashboard/documents'
     | '/dashboard/notifications'
+    | '/dashboard/onboarding'
     | '/dashboard/profile'
     | '/dashboard/qr'
     | '/dashboard/scanner'
     | '/dashboard/settings'
     | '/dashboard/share'
     | '/dashboard/'
+    | '/dashboard/onboarding/fill'
     | '/dashboard/soon/$slug'
+    | '/dashboard/onboarding/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -185,7 +215,9 @@ export interface FileRouteTypes {
     | '/dashboard/settings'
     | '/dashboard/share'
     | '/dashboard'
+    | '/dashboard/onboarding/fill'
     | '/dashboard/soon/$slug'
+    | '/dashboard/onboarding'
   id:
     | '__root__'
     | '/'
@@ -196,13 +228,16 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/dashboard/documents'
     | '/dashboard/notifications'
+    | '/dashboard/onboarding'
     | '/dashboard/profile'
     | '/dashboard/qr'
     | '/dashboard/scanner'
     | '/dashboard/settings'
     | '/dashboard/share'
     | '/dashboard/'
+    | '/dashboard/onboarding/fill'
     | '/dashboard/soon/$slug'
+    | '/dashboard/onboarding/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -279,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardNotificationsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/onboarding': {
+      id: '/dashboard/onboarding'
+      path: '/onboarding'
+      fullPath: '/dashboard/onboarding'
+      preLoaderRoute: typeof DashboardOnboardingRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/profile': {
       id: '/dashboard/profile'
       path: '/profile'
@@ -314,6 +356,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardShareRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/onboarding/': {
+      id: '/dashboard/onboarding/'
+      path: '/'
+      fullPath: '/dashboard/onboarding/'
+      preLoaderRoute: typeof DashboardOnboardingIndexRouteImport
+      parentRoute: typeof DashboardOnboardingRoute
+    }
+    '/dashboard/onboarding/fill': {
+      id: '/dashboard/onboarding/fill'
+      path: '/fill'
+      fullPath: '/dashboard/onboarding/fill'
+      preLoaderRoute: typeof DashboardOnboardingFillRouteImport
+      parentRoute: typeof DashboardOnboardingRoute
+    }
     '/dashboard/soon/$slug': {
       id: '/dashboard/soon/$slug'
       path: '/soon/$slug'
@@ -324,9 +380,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DashboardOnboardingRouteChildren {
+  DashboardOnboardingFillRoute: typeof DashboardOnboardingFillRoute
+  DashboardOnboardingIndexRoute: typeof DashboardOnboardingIndexRoute
+}
+
+const DashboardOnboardingRouteChildren: DashboardOnboardingRouteChildren = {
+  DashboardOnboardingFillRoute: DashboardOnboardingFillRoute,
+  DashboardOnboardingIndexRoute: DashboardOnboardingIndexRoute,
+}
+
+const DashboardOnboardingRouteWithChildren =
+  DashboardOnboardingRoute._addFileChildren(DashboardOnboardingRouteChildren)
+
 interface DashboardRouteChildren {
   DashboardDocumentsRoute: typeof DashboardDocumentsRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
+  DashboardOnboardingRoute: typeof DashboardOnboardingRouteWithChildren
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardQrRoute: typeof DashboardQrRoute
   DashboardScannerRoute: typeof DashboardScannerRoute
@@ -339,6 +409,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardDocumentsRoute: DashboardDocumentsRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
+  DashboardOnboardingRoute: DashboardOnboardingRouteWithChildren,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardQrRoute: DashboardQrRoute,
   DashboardScannerRoute: DashboardScannerRoute,

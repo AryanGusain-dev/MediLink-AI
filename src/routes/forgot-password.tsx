@@ -5,6 +5,8 @@ import { AuthLayout } from "@/components/layout/auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -21,10 +23,22 @@ export const Route = createFileRoute("/forgot-password")({
 function ForgotPasswordPage() {
   const [state, setState] = useState<"idle" | "loading" | "sent">("idle");
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setState("loading");
-    setTimeout(() => setState("sent"), 900);
+
+    const email = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      toast.error(error.message);
+      setState("idle");
+    } else {
+      setState("sent");
+    }
   };
 
   return (

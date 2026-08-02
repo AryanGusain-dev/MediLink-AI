@@ -17,9 +17,13 @@ import { useTheme } from "@/hooks/use-theme";
 import { currentUser, notifications } from "@/data/mock";
 import { StatusBadge } from "@/components/shared/page-header";
 import { formatRelative } from "@/lib/format";
+import { useAuth } from "@/contexts/auth";
+import { useNavigate } from "@tanstack/react-router";
 
 export function DashboardTopbar() {
   const { theme, toggle } = useTheme();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const unread = notifications.filter((n) => !n.read).length;
 
   return (
@@ -78,15 +82,19 @@ export function DashboardTopbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-10 gap-2 rounded-xl px-2">
               <Avatar className="size-7">
-                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">AS</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                  {user?.user_metadata?.full_name?.substring(0, 2).toUpperCase() || "U"}
+                </AvatarFallback>
               </Avatar>
-              <span className="hidden text-sm font-medium md:inline">{currentUser.name.split(" ")[0]}</span>
+              <span className="hidden text-sm font-medium md:inline">
+                {user?.user_metadata?.full_name?.split(" ")[0] || "User"}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 rounded-2xl">
             <DropdownMenuLabel>
-              <p className="text-sm font-semibold">{currentUser.name}</p>
-              <p className="text-xs font-normal text-muted-foreground">{currentUser.email}</p>
+              <p className="text-sm font-semibold">{user?.user_metadata?.full_name || "User"}</p>
+              <p className="text-xs font-normal text-muted-foreground">{user?.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -94,10 +102,14 @@ export function DashboardTopbar() {
                 <UserRound className="size-4" aria-hidden /> Profile
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/login">
-                <LogOut className="size-4" aria-hidden /> Sign out
-              </Link>
+            <DropdownMenuItem
+              onSelect={async (e) => {
+                e.preventDefault();
+                await signOut();
+                navigate({ to: "/login" });
+              }}
+            >
+              <LogOut className="size-4 mr-2" aria-hidden /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

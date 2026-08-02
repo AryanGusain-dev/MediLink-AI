@@ -59,3 +59,7 @@ vite.config.ts.timestamp-*
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+supabase/.temp
+
+backend
