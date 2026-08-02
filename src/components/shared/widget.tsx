@@ -30,7 +30,7 @@ export function Widget({
       transition={{ duration: 0.4, delay }}
       className={cn("h-full", className)}
     >
-      <Card className="card-hover h-full gap-4 rounded-2xl border-border bg-card shadow-soft">
+      <Card className="card-hover h-full gap-5 rounded-2xl border-border bg-card shadow-soft">
         {title ? (
           <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pb-0">
             <CardTitle className="flex min-w-0 items-center gap-2 font-display text-sm font-semibold text-foreground">

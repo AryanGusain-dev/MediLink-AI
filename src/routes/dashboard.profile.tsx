@@ -2,19 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import {
-  Building2,
-  Camera,
-  Droplets,
-  HeartPulse,
-  Home,
-  Pill,
-  Save,
-  ShieldAlert,
-  ShieldCheck,
-  Stethoscope,
-  Syringe,
-  TriangleAlert,
-  UserRound,
+  Building2, Camera, CheckCircle2, ChevronRight, CircleAlert, ClipboardList, Droplets, Ellipsis, FileText, Heart, HeartPulse, Home, Hospital, Pill, QrCode, Save, Share2, ShieldAlert, ShieldCheck, Stethoscope, Syringe, TriangleAlert, UserCheck, UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, StatusBadge } from "@/components/shared/page-header";
@@ -25,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { healthProfile, currentUser } from "@/data/mock";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { documents, healthProfile, currentUser, qrCodes } from "@/data/mock";
 import { formatDate, initials } from "@/lib/format";
 
 export const Route = createFileRoute("/dashboard/profile")({
@@ -244,33 +233,27 @@ function ProfilePage() {
 
 function PatientPassport() {
   const p = healthProfile;
+  const bmi = (p.weightKg / (p.heightCm / 100) ** 2).toFixed(1);
+  const activeQr = qrCodes.some((item) => item.status === "active");
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Patient Passport"
-        description="Your essential health information in one clear, read-only view."
+        description="Your essential health information at a glance"
         icon={UserRound}
         actions={
-          <Button asChild className="rounded-xl">
-            <Link to="/dashboard/profile" search={{ mode: "edit" }}>Edit Profile</Link>
-          </Button>
+          <><Button className="rounded-xl" onClick={() => toast.success("Passport share link copied")}><Share2 className="size-4" aria-hidden /> Share Passport</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-xl" aria-label="Passport actions"><Ellipsis className="size-5" aria-hidden /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem asChild><Link to="/dashboard/profile" search={{ mode: "edit" }}>Edit profile</Link></DropdownMenuItem></DropdownMenuContent></DropdownMenu></>
         }
       />
 
-      <Widget title="Personal Information" icon={UserRound} delay={0}>
-        <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-          <PassportDetail label="Full name" value={p.fullName} />
-          <PassportDetail label="Age" value={`${p.age} years`} />
-          <PassportDetail label="Gender" value={p.gender} />
-          <PassportDetail label="Blood group" value={p.bloodGroup} />
-          <PassportDetail label="Height" value={`${p.heightCm} cm`} />
-          <PassportDetail label="Weight" value={`${p.weightKg} kg`} />
-          <PassportDetail label="Address" value={p.address} className="sm:col-span-2 lg:col-span-3" />
-        </dl>
+      <Widget title="Patient Information" icon={UserRound} delay={0}>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]"><dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3"><div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Full name</dt><dd className="mt-1 flex items-center gap-2 text-base font-semibold text-foreground">{p.fullName}<StatusBadge tone="success">Verified</StatusBadge></dd></div><PassportDetail label="Patient ID" value={`ML-${p.userId.replace("usr_", "")}`} /><PassportDetail label="Age" value={`${p.age} years`} /><PassportDetail label="Gender" value={p.gender} /><PassportDetail label="Date of birth" value="14 May 1994" /><PassportDetail label="Blood group" value={p.bloodGroup} /><PassportDetail label="Location" value="Bengaluru, Karnataka" /><PassportDetail label="Phone" value={currentUser.phone} /><PassportDetail label="Email" value={currentUser.email} /></dl><dl className="grid content-start gap-y-5 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"><PassportDetail label="Insurance provider" value={p.insurance.provider} /><PassportDetail label="Policy number" value={p.insurance.policyNumber} /><PassportDetail label="Last updated" value="18 Jul 2026" /></dl></div>
       </Widget>
 
-      <Widget title="Emergency Summary" icon={ShieldAlert} delay={0.05}>
+      <Widget title="Emergency Summary" icon={ShieldAlert} delay={0.05} action={<Button variant="ghost" size="sm" className="rounded-lg text-xs">View Full</Button>} className="[&>div]:border-primary/25 [&>div]:bg-primary/[0.025]">
+        <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><EmergencyDetail label="Blood Group" value={p.bloodGroup} icon={Droplets} /><EmergencyDetail label="Allergies" value={p.allergies.map((item) => item.allergen).join(", ")} icon={CircleAlert} /><EmergencyDetail label="Chronic Conditions" value={p.conditions.map((item) => item.name).join(", ")} icon={HeartPulse} /><EmergencyDetail label="Current Medications" value={`${p.medications.length} active`} icon={Pill} /><EmergencyDetail label="Surgeries" value="No surgical history" icon={ClipboardList} /><EmergencyDetail label="Organ Donor Status" value="Not registered" icon={Heart} /><EmergencyDetail label="Emergency QR Status" value={activeQr ? "Active" : "Inactive"} icon={QrCode} status={activeQr ? "success" : "neutral"} /><EmergencyDetail label="Emergency Contact" value={`${p.emergencyContacts[0]?.name} · ${p.emergencyContacts[0]?.phone}`} icon={UserCheck} /></dl>
+        <div className="mt-6 border-t border-border pt-5">
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <p className="mb-3 text-sm font-medium text-foreground">Emergency contacts</p>
@@ -308,6 +291,7 @@ function PatientPassport() {
             </div>
           </div>
         </div>
+        </div>
       </Widget>
 
       <Widget title="Allergies & Conditions" icon={HeartPulse} delay={0.1}>
@@ -342,8 +326,24 @@ function PatientPassport() {
           </div>
         </div>
       </Widget>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Widget title="Health Overview" icon={HeartPulse} delay={0.12}><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Blood Pressure", "118/76"], ["Blood Sugar", "96"], ["Heart Rate", "72"], ["BMI", bmi]].map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-surface p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 font-display text-lg font-bold text-foreground">{value}</p></div>)}</div></Widget>
+        <Widget title="Medical Conditions" icon={HeartPulse} delay={0.14}><div className="flex flex-wrap gap-2">{[...p.conditions.map((item) => item.name), "No Known Heart Disease"].map((condition) => <span key={condition} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground">{condition}</span>)}</div></Widget>
+        <Widget title="Current Medications" icon={Pill} delay={0.16}><div className="overflow-x-auto"><table className="w-full min-w-[34rem] text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3">Medication</th><th className="pb-3">Dosage</th><th className="pb-3">Frequency</th><th className="pb-3">Prescribed By</th></tr></thead><tbody className="divide-y divide-border">{p.medications.map((m) => <tr key={m.id}><td className="py-3 font-medium text-foreground">{m.name}</td><td>{m.dosage}</td><td>{m.frequency}</td><td>{m.prescribedBy}</td></tr>)}</tbody></table></div></Widget>
+        <Widget title="Recent Records" icon={FileText} delay={0.18} action={<Button variant="ghost" size="sm" className="text-xs">View All</Button>}><ul className="divide-y divide-border">{documents.slice(0, 3).map((d) => <li key={d.id} className="flex items-center gap-3 py-3 first:pt-0"><FileText className="size-4 text-primary" aria-hidden /><div><p className="text-sm font-medium text-foreground">{d.name}</p><p className="text-xs text-muted-foreground">{formatDate(d.uploadedAt)} · {d.category}</p></div></li>)}</ul></Widget>
+        <Widget title="AI Health Insights" icon={CheckCircle2} delay={0.2}><ul className="space-y-3">{["Thyroid levels are within range.", "Your influenza vaccine is due this month.", "Blood pressure and BMI are in a healthy range."].map((insight, i) => <li key={insight} className="flex items-center gap-3 rounded-xl border border-border p-3"><CheckCircle2 className="size-4 text-success" aria-hidden /><p className="flex-1 text-sm text-foreground">{insight}</p><StatusBadge tone={i === 1 ? "warning" : "success"}>Status</StatusBadge></li>)}</ul><Button variant="ghost" size="sm" className="mt-4 px-0 text-primary">Explain with AI <ChevronRight className="size-4" /></Button></Widget>
+        <Widget title="Health Risk Score" icon={ShieldCheck} delay={0.22}><div className="flex items-center gap-6"><div className="grid size-28 place-items-center rounded-full border-8 border-primary/20 text-center"><span className="font-display text-2xl font-bold text-primary">82</span></div><dl className="flex-1 space-y-3">{[["Cardiovascular Risk", "success"], ["Diabetes Risk", "success"], ["Lifestyle Risk", "warning"]].map(([label, tone]) => <div key={label} className="flex justify-between"><dt className="text-sm text-muted-foreground">{label}</dt><StatusBadge tone={tone as "success" | "warning"}>Risk</StatusBadge></div>)}</dl></div></Widget>
+        <Widget title="Immunization Status" icon={Syringe} delay={0.24}><ul className="divide-y divide-border">{p.vaccinations.map((v) => <li key={v.id} className="flex items-center gap-3 py-3 first:pt-0"><div className="flex-1"><p className="text-sm font-medium text-foreground">{v.name}</p><p className="text-xs text-muted-foreground">Dose {v.doses}</p></div><StatusBadge tone={v.status === "complete" ? "success" : "warning"}>{v.status}</StatusBadge></li>)}</ul></Widget>
+        <Widget title="Active Shares & Access" icon={Share2} delay={0.26}><ul className="divide-y divide-border">{[[Stethoscope, p.doctors[0]?.name ?? "Doctor", p.doctors[0]?.specialty ?? "Care team"], [Hospital, p.doctors[0]?.hospital ?? "Hospital", "Hospital access"], [UserRound, "Family Access", "Family member"]].map(([Icon, name, role]) => <li key={String(role)} className="flex items-center gap-3 py-3 first:pt-0"><Icon className="size-4 text-primary" /><div className="flex-1"><p className="text-sm font-medium text-foreground">{String(name)}</p><p className="text-xs text-muted-foreground">{String(role)}</p></div><StatusBadge tone="success">Active</StatusBadge></li>)}</ul><Button asChild variant="ghost" size="sm" className="mt-3 px-0 text-primary"><Link to="/dashboard/share">View all shared profiles <ChevronRight className="size-4" /></Link></Button></Widget>
+      </div>
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft"><ShieldCheck className="size-5 shrink-0 text-success" /><p className="text-sm text-muted-foreground">Your data is secure and encrypted. You are in control of your health information.</p></div>
     </div>
   );
+}
+
+function EmergencyDetail({ label, value, icon: Icon, status }: { label: string; value: string; icon: typeof Droplets; status?: "success" | "neutral" }) {
+  return <div className="rounded-xl border border-border bg-card p-4"><div className="flex justify-between gap-3"><Icon className="size-4 text-primary" />{status ? <StatusBadge tone={status}>{value}</StatusBadge> : null}</div><dt className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-1 text-sm font-medium text-foreground">{value}</dd></div>;
 }
 
 function PassportDetail({ label, value, className }: { label: string; value: string; className?: string }) {
