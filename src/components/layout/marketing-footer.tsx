@@ -51,7 +51,7 @@ export function MarketingFooter() {
               {column.items.map((item) => (
                 <li key={item.label}>
                   <Link
-                    to={item.to}
+                    to={item.to as never}
                     className="text-sm text-muted-foreground transition-colors hover:text-primary"
                   >
                     {item.label}
