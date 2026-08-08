@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Copy,
@@ -30,10 +30,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { shareFields, shareProfiles as seedProfiles } from "@/data/mock";
-import type { ShareFieldKey, ShareProfile } from "@/types";
+import type { ShareFieldKey, ShareProfile, QRCodeItem } from "@/types";
 import { formatDate } from "@/lib/format";
 
+type ShareSearchParams = {
+  create?: boolean;
+};
+
 export const Route = createFileRoute("/dashboard/share")({
+  validateSearch: (search: Record<string, unknown>): ShareSearchParams => ({
+    create: search.create === "true" || search.create === true || undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Share Profiles & Links — MediLink AI" },
@@ -54,7 +61,13 @@ const visibilityLabel: Record<ShareProfile["visibility"], string> = {
 };
 
 function SharePage() {
-  const [profiles, setProfiles] = useState<ShareProfile[]>(seedProfiles);
+  const { create: shouldCreate } = Route.useSearch();
+  const navigate = useNavigate();
+
+  const [profiles, setProfiles] = useState<ShareProfile[]>(() => {
+    const saved = localStorage.getItem("medi-link-share-profiles");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [editing, setEditing] = useState<ShareProfile | null>(null);
 
   const toggleField = (key: ShareFieldKey) => {
@@ -63,16 +76,6 @@ function SharePage() {
       ...editing,
       fields: editing.fields.includes(key) ? editing.fields.filter((f) => f !== key) : [...editing.fields, key],
     });
-  };
-
-  const saveEditing = () => {
-    if (!editing) return;
-    setProfiles((prev) => {
-      const exists = prev.some((p) => p.id === editing.id);
-      return exists ? prev.map((p) => (p.id === editing.id ? editing : p)) : [editing, ...prev];
-    });
-    setEditing(null);
-    toast.success("Share profile saved");
   };
 
   const createProfile = () => {
@@ -91,15 +94,74 @@ function SharePage() {
     });
   };
 
+  useEffect(() => {
+    if (shouldCreate) {
+      createProfile();
+      navigate({ search: { create: undefined } as any });
+    }
+  }, [shouldCreate]);
+
+  const saveEditing = () => {
+    if (!editing) return;
+
+    const exists = profiles.some((p) => p.id === editing.id);
+    const nextProfiles: ShareProfile[] = exists 
+      ? profiles.map((p) => (p.id === editing.id ? editing : p)) 
+      : [editing, ...profiles];
+      
+    localStorage.setItem("medi-link-share-profiles", JSON.stringify(nextProfiles));
+    
+    if (!exists) {
+      const savedQrCodes = localStorage.getItem("medi-link-qr-codes");
+      const currentQrCodes: QRCodeItem[] = savedQrCodes ? JSON.parse(savedQrCodes) : [];
+      const newQrCode: QRCodeItem = {
+        id: `qr_${Date.now()}`,
+        shareProfileId: editing.id,
+        label: `${editing.name} QR`,
+        createdAt: new Date().toISOString(),
+        scans: 0,
+        status: "active",
+      };
+      const nextQrCodes = [newQrCode, ...currentQrCodes];
+      localStorage.setItem("medi-link-qr-codes", JSON.stringify(nextQrCodes));
+    } else {
+      const oldProfile = profiles.find((p) => p.id === editing.id);
+      if (oldProfile && oldProfile.name !== editing.name) {
+        const savedQrCodes = localStorage.getItem("medi-link-qr-codes");
+        const currentQrCodes: QRCodeItem[] = savedQrCodes ? JSON.parse(savedQrCodes) : [];
+        const nextQrCodes = currentQrCodes.map((qr) => {
+          if (qr.shareProfileId === editing.id && qr.label === `${oldProfile.name} QR`) {
+            return { ...qr, label: `${editing.name} QR` };
+          }
+          return qr;
+        });
+        localStorage.setItem("medi-link-qr-codes", JSON.stringify(nextQrCodes));
+      }
+    }
+    
+    setProfiles(nextProfiles);
+    setEditing(null);
+    toast.success("Share profile saved");
+  };
+
   const remove = (id: string) => {
-    setProfiles((prev) => prev.filter((p) => p.id !== id));
+    const nextProfiles = profiles.filter((p) => p.id !== id);
+    localStorage.setItem("medi-link-share-profiles", JSON.stringify(nextProfiles));
+
+    // Also remove the corresponding QR code
+    const savedQrCodes = localStorage.getItem("medi-link-qr-codes");
+    const currentQrCodes: QRCodeItem[] = savedQrCodes ? JSON.parse(savedQrCodes) : [];
+    const nextQrCodes = currentQrCodes.filter((c) => c.shareProfileId !== id);
+    localStorage.setItem("medi-link-qr-codes", JSON.stringify(nextQrCodes));
+
+    setProfiles(nextProfiles);
     toast.success("Share profile deleted");
   };
 
   const regenerate = (id: string) => {
-    setProfiles((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, token: Math.random().toString(36).slice(2, 10), status: "active" } : p)),
-    );
+    const next: ShareProfile[] = profiles.map((p) => (p.id === id ? { ...p, token: Math.random().toString(36).slice(2, 10), status: "active" } : p));
+    localStorage.setItem("medi-link-share-profiles", JSON.stringify(next));
+    setProfiles(next);
     toast.success("Link regenerated — the previous URL no longer works");
   };
 

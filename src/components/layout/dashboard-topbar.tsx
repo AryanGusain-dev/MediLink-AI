@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, LogOut, Moon, Search, Sun, UserRound } from "lucide-react";
+import { Bell, LogOut, Moon, Search, Settings, Sun, UserRound } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,6 +110,11 @@ export function DashboardTopbar() {
               }}
             >
               <LogOut className="size-4 mr-2" aria-hidden /> Sign out
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/dashboard/settings">
+                <Settings className="size-4 mr-2" aria-hidden /> Settings
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

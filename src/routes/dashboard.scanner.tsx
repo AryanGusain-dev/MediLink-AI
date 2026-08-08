@@ -1,11 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState, type ChangeEvent } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useRef, useState, type ChangeEvent, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Camera, FileScan, ImagePlus, RotateCcw, ScanLine, Sparkles } from "lucide-react";
 import { PageHeader, StatusBadge } from "@/components/shared/page-header";
 import { Widget } from "@/components/shared/widget";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/dashboard/scanner")({
   head: () => ({
@@ -24,35 +27,82 @@ type Phase = "idle" | "preview" | "scanning" | "result";
 const scanSteps = ["Preparing image", "Detecting document edges", "Enhancing contrast", "Preparing structured record"];
 
 function ScannerPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("idle");
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("id").eq("auth_user_id", user.id).maybeSingle();
+      if (data) setProfileId(data.id);
+    }
+    fetchProfile();
+  }, [user]);
 
   const onPick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
+    setSelectedFile(file);
     setPreview(URL.createObjectURL(file));
     setPhase("preview");
   };
 
-  const startScan = () => {
+  const startScan = async () => {
+    if (!selectedFile) return;
+    if (!user || !profileId) {
+      toast.error("Please wait or sign in to scan documents.");
+      return;
+    }
     setPhase("scanning");
     setProgress(0);
+    
     const timer = setInterval(() => {
       setProgress((prev) => {
         const next = prev + 8;
-        if (next >= 100) {
-          clearInterval(timer);
-          setTimeout(() => setPhase("result"), 400);
-          return 100;
-        }
+        if (next >= 90) return 90;
         return next;
       });
     }, 120);
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    formData.append("profile_id", profileId);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiUrl}/documents/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed with status ${response.status}`);
+      }
+      
+      clearInterval(timer);
+      setProgress(100);
+      toast.success("Document scanned and sent for analysis!");
+      
+      setTimeout(() => {
+        navigate({ to: "/dashboard/documents" });
+      }, 600);
+
+    } catch (err) {
+      console.error("Scan error:", err);
+      toast.error("Failed to upload scan. Please try again.");
+      clearInterval(timer);
+      setPhase("preview");
+      setProgress(0);
+    }
   };
 
   const reset = () => {
@@ -156,57 +206,10 @@ function ScannerPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
-            <p className="text-xs font-semibold text-warning">Analysis in development</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Automated extraction is not active yet. Scans are captured and filed, not interpreted.
-            </p>
-          </div>
         </Widget>
       </div>
 
       <AnimatePresence>
-        {phase === "result" ? (
-          <motion.section
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="overflow-hidden rounded-3xl border border-border bg-card shadow-soft"
-          >
-            <div className="gradient-brand grid place-items-center px-6 py-10">
-              <span className="grid size-20 place-items-center rounded-3xl bg-card/95 shadow-lift">
-                <FileScan className="size-9 text-primary" aria-hidden />
-              </span>
-            </div>
-            <div className="space-y-8 p-6 sm:p-10">
-              <StatusBadge tone="warning">Feature Under Development</StatusBadge>
-              <h2 className="font-display text-2xl font-bold text-foreground">Medical Report Analysis</h2>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                This feature is currently under development. Future versions of MediLink AI will automatically:
-              </p>
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {[
-                  "Extract medical information",
-                  "Detect important values",
-                  "Convert reports into structured FHIR resources",
-                  "Organize health records",
-                  "Enable AI-powered medical insights",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-teal" aria-hidden />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-sm font-medium text-primary">Thank you for supporting MediLink AI.</p>
-              <div className="flex flex-wrap gap-2">
-                <Button className="rounded-xl" onClick={reset}>
-                  Scan another report
-                </Button>
-              </div>
-            </div>
-          </motion.section>
-        ) : null}
       </AnimatePresence>
     </div>
   );

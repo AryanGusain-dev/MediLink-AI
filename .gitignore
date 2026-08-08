@@ -62,4 +62,5 @@ Desktop.ini
 
 supabase/.temp
 
-backend
+backend/venv
+backend/.env

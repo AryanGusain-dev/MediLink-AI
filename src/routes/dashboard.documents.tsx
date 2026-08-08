@@ -154,6 +154,18 @@ function DocumentsPage() {
     fetchUserDocuments();
   }, [fetchUserDocuments]);
 
+  // Poll for processing documents
+  useEffect(() => {
+    const processingDocs = docs.filter(d => d.status === "processing");
+    if (processingDocs.length === 0) return;
+
+    const interval = setInterval(() => {
+      fetchUserDocuments();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [docs, fetchUserDocuments]);
+
   // Handle uploading files
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -167,38 +179,28 @@ function DocumentsPage() {
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      const fileExt = file.name.split(".").pop();
-      const uniqueName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-      const storagePath = `${user.id}/${uniqueName}`;
-
+      
       setProgress(40 + Math.round(((i + 0.5) / fileList.length) * 40));
 
-      // Attempt to upload to Supabase Storage
-      const { error: storageErr } = await supabase.storage
-        .from("documents")
-        .upload(storagePath, file, { upsert: true });
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("profile_id", profileId);
 
-      if (storageErr) {
-        console.warn("Storage bucket notice:", storageErr.message);
-      }
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const response = await fetch(`${apiUrl}/documents/upload`, {
+          method: "POST",
+          body: formData,
+        });
 
-      // Insert record into Supabase DB
-      const { error: dbErr } = await supabase.from("documents").insert({
-        profile_id: profileId,
-        title: file.name,
-        category: "Other",
-        file_name: file.name,
-        storage_path: storagePath,
-        mime_type: file.type || (file.name.endsWith(".pdf") ? "application/pdf" : "image/png"),
-        file_size: file.size,
-        status: "uploaded",
-      });
-
-      if (dbErr) {
-        console.error("DB insert error:", dbErr);
-        toast.error(`Failed to save record for ${file.name}`);
-      } else {
+        if (!response.ok) {
+          throw new Error(`Upload failed with status ${response.status}`);
+        }
+        
         toast.success(`Uploaded ${file.name}`);
+      } catch (err) {
+        console.error("Upload error:", err);
+        toast.error(`Failed to upload ${file.name}`);
       }
     }
 

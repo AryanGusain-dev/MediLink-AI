@@ -91,68 +91,10 @@ export const shareFields: ShareField[] = [
   { key: "emergencyNotes", label: "Emergency notes", description: "Instructions for first responders" },
   { key: "notes", label: "Personal notes", description: "Free-form notes you added" },
 ];
+export const shareProfiles: ShareProfile[] = [];
 
-export const shareProfiles: ShareProfile[] = [
-  {
-    id: "sp_1",
-    name: "Emergency Access",
-    preset: "Emergency",
-    description: "Minimal life-saving information for first responders.",
-    fields: ["name", "age", "bloodGroup", "allergies", "conditions", "emergencyContacts", "emergencyNotes"],
-    createdAt: "2026-05-12T11:00:00Z",
-    expiresAt: null,
-    visibility: "public-link",
-    status: "active",
-    views: 41,
-    token: "em-9x4k2p",
-  },
-  {
-    id: "sp_2",
-    name: "Doctor Visit — Endocrinology",
-    preset: "Doctor Visit",
-    description: "Full clinical context for a consulting physician.",
-    fields: ["name", "age", "gender", "conditions", "medications", "allergies", "reports", "summary", "doctors"],
-    createdAt: "2026-06-20T09:30:00Z",
-    expiresAt: "2026-08-20T09:30:00Z",
-    visibility: "pin-protected",
-    status: "active",
-    views: 12,
-    token: "dv-7hq31a",
-  },
-  {
-    id: "sp_3",
-    name: "Insurance Claim Pack",
-    preset: "Insurance",
-    description: "Policy details plus supporting bills and reports.",
-    fields: ["name", "age", "insurance", "documents", "reports"],
-    createdAt: "2026-03-02T14:10:00Z",
-    expiresAt: "2026-06-02T14:10:00Z",
-    visibility: "private",
-    status: "expired",
-    views: 5,
-    token: "in-22bz80",
-  },
-  {
-    id: "sp_4",
-    name: "Family Access",
-    preset: "Family",
-    description: "Shared with immediate family for caregiving.",
-    fields: ["name", "bloodGroup", "medications", "vaccinations", "doctors", "notes"],
-    createdAt: "2026-07-01T18:45:00Z",
-    expiresAt: null,
-    visibility: "pin-protected",
-    status: "active",
-    views: 23,
-    token: "fa-5kt19c",
-  },
-];
+export const qrCodes: QRCodeItem[] = [];
 
-export const qrCodes: QRCodeItem[] = [
-  { id: "qr_1", shareProfileId: "sp_1", label: "Wallet Emergency QR", createdAt: "2026-05-12T11:05:00Z", scans: 38, status: "active" },
-  { id: "qr_2", shareProfileId: "sp_2", label: "Clinic Visit QR", createdAt: "2026-06-20T09:35:00Z", scans: 9, status: "active" },
-  { id: "qr_3", shareProfileId: "sp_4", label: "Family Fridge QR", createdAt: "2026-07-01T18:50:00Z", scans: 14, status: "active" },
-  { id: "qr_4", shareProfileId: "sp_3", label: "Insurance Desk QR", createdAt: "2026-03-02T14:12:00Z", scans: 3, status: "inactive" },
-];
 
 export const notifications: Notification[] = [
   { id: "nt_1", title: "New login detected", message: "Chrome on macOS · Bengaluru", type: "warning", createdAt: "2026-07-25T08:12:00Z", read: false },

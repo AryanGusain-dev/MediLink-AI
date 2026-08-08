@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { QRCodeCanvas } from "qrcode.react";
@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { qrCodes as seedQrCodes, shareProfiles } from "@/data/mock";
-import type { QRCodeItem } from "@/types";
+import type { QRCodeItem, ShareProfile } from "@/types";
 import { formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/dashboard/qr")({
@@ -36,40 +36,45 @@ export const Route = createFileRoute("/dashboard/qr")({
 const BASE_URL = "https://medilink.ai/s/";
 
 function QRPage() {
-  const [codes, setCodes] = useState<QRCodeItem[]>(seedQrCodes);
+  const navigate = useNavigate();
+
+  const [profiles] = useState<ShareProfile[]>(() => {
+    const saved = localStorage.getItem("medi-link-share-profiles");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [codes, setCodes] = useState<QRCodeItem[]>(() => {
+    const saved = localStorage.getItem("medi-link-qr-codes");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [renaming, setRenaming] = useState<QRCodeItem | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   const linkFor = (item: QRCodeItem) => {
-    const profile = shareProfiles.find((p) => p.id === item.shareProfileId);
+    const profile = profiles.find((p) => p.id === item.shareProfileId);
     return `${BASE_URL}${profile?.token ?? item.id}`;
   };
 
-  const create = () => {
-    const profile = shareProfiles[Math.floor(Math.random() * shareProfiles.length)];
-    const next: QRCodeItem = {
-      id: `qr_${Date.now()}`,
-      shareProfileId: profile.id,
-      label: `${profile.name} QR`,
-      createdAt: new Date().toISOString(),
-      scans: 0,
-      status: "active",
-    };
-    setCodes((prev) => [next, ...prev]);
-    toast.success("QR code generated");
+  const triggerCreateProfile = () => {
+    navigate({ to: "/dashboard/share", search: { create: true } });
   };
 
   const duplicate = (item: QRCodeItem) => {
-    setCodes((prev) => [{ ...item, id: `qr_${Date.now()}`, label: `${item.label} (copy)`, scans: 0, createdAt: new Date().toISOString() }, ...prev]);
+    const next: QRCodeItem[] = [{ ...item, id: `qr_${Date.now()}`, label: `${item.label} (copy)`, scans: 0, createdAt: new Date().toISOString() }, ...codes];
+    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
+    setCodes(next);
     toast.success("QR code duplicated");
   };
 
   const toggleStatus = (id: string) => {
-    setCodes((prev) => prev.map((c) => (c.id === id ? { ...c, status: c.status === "active" ? "inactive" : "active" } : c)));
+    const next: QRCodeItem[] = codes.map((c) => (c.id === id ? { ...c, status: (c.status === "active" ? "inactive" : "active") as "active" | "inactive" } : c));
+    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
+    setCodes(next);
   };
 
   const remove = (id: string) => {
-    setCodes((prev) => prev.filter((c) => c.id !== id));
+    const next: QRCodeItem[] = codes.filter((c) => c.id !== id);
+    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
+    setCodes(next);
     toast.success("QR code deleted");
   };
 
@@ -86,7 +91,9 @@ function QRPage() {
 
   const confirmRename = () => {
     if (!renaming) return;
-    setCodes((prev) => prev.map((c) => (c.id === renaming.id ? { ...c, label: renameValue } : c)));
+    const next = codes.map((c) => (c.id === renaming.id ? { ...c, label: renameValue } : c));
+    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
+    setCodes(next);
     setRenaming(null);
     toast.success("QR code renamed");
   };
@@ -98,7 +105,7 @@ function QRPage() {
         description="Printable codes that open exactly the fields in their share profile."
         icon={QrCode}
         actions={
-          <Button className="rounded-xl" onClick={create}>
+          <Button className="rounded-xl" onClick={triggerCreateProfile}>
             <QrCode className="size-4" aria-hidden /> Generate QR code
           </Button>
         }
@@ -110,7 +117,7 @@ function QRPage() {
           title="No QR codes yet"
           description="Generate a code from any share profile and keep it in your wallet or on your fridge."
           action={
-            <Button className="rounded-xl" onClick={create}>
+            <Button className="rounded-xl" onClick={triggerCreateProfile}>
               Generate your first QR
             </Button>
           }
@@ -119,7 +126,7 @@ function QRPage() {
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {codes.map((item, i) => {
-              const profile = shareProfiles.find((p) => p.id === item.shareProfileId);
+              const profile = profiles.find((p) => p.id === item.shareProfileId);
               return (
                 <motion.div
                   key={item.id}

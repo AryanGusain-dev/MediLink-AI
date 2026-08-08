@@ -34,8 +34,6 @@ const mainNav = [
   { label: "Report Scanner", to: "/dashboard/scanner", icon: ScanLine },
   { label: "Share Profiles", to: "/dashboard/share", icon: Share2 },
   { label: "QR Codes", to: "/dashboard/qr", icon: QrCode },
-  { label: "Notifications", to: "/dashboard/notifications", icon: Bell },
-  { label: "Settings", to: "/dashboard/settings", icon: Settings },
 ] as const;
 
 export function AppSidebar() {
