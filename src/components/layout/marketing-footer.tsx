@@ -26,7 +26,6 @@ const columns = [
       { label: "Sign in", to: "/login" },
       { label: "Create account", to: "/register" },
       { label: "Reset password", to: "/forgot-password" },
-      { label: "Settings", to: "/dashboard/settings" },
     ],
   },
 ] as const;
@@ -52,7 +51,7 @@ export function MarketingFooter() {
               {column.items.map((item) => (
                 <li key={item.label}>
                   <Link
-                    to={item.to}
+                    to={item.to as never}
                     className="text-sm text-muted-foreground transition-colors hover:text-primary"
                   >
                     {item.label}

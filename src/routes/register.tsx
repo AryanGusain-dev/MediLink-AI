@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
+import { resetThemeToLight } from "@/hooks/use-theme";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -74,6 +75,7 @@ function RegisterPage() {
     if (error) {
       toast.error(error.message);
     } else {
+      resetThemeToLight();
       toast.success("Account created — welcome to MediLink AI");
       navigate({ to: "/dashboard" });
     }

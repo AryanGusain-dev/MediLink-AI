@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
+import { resetThemeToLight } from "@/hooks/use-theme";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -28,7 +29,6 @@ function LoginPage() {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
     const email = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value;
     const password = (e.currentTarget.elements.namedItem("password") as HTMLInputElement).value;
 
@@ -42,6 +42,7 @@ function LoginPage() {
     if (error) {
       toast.error(error.message);
     } else {
+      resetThemeToLight();
       toast.success("Welcome back to MediLink AI");
       navigate({ to: "/dashboard" });
     }

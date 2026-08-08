@@ -98,10 +98,17 @@ export function DashboardTopbar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/dashboard/profile">
+              <Link to="/dashboard/profile" search={{ mode: "edit" }}>
                 <UserRound className="size-4" aria-hidden /> Profile
               </Link>
             </DropdownMenuItem>
+
+            <DropdownMenuItem asChild>
+              <Link to="/dashboard/settings">
+                <Settings className="size-4" aria-hidden /> Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={async (e) => {
                 e.preventDefault();
@@ -110,11 +117,6 @@ export function DashboardTopbar() {
               }}
             >
               <LogOut className="size-4 mr-2" aria-hidden /> Sign out
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/dashboard/settings">
-                <Settings className="size-4 mr-2" aria-hidden /> Settings
-              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,7 +1,7 @@
+import { CheckCircle2, CircleAlert, Clock3, Info, LoaderCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 
 /** Page header used across every dashboard screen. */
 export function PageHeader({
@@ -44,10 +44,13 @@ const toneClasses: Record<Tone, string> = {
 };
 
 export function StatusBadge({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
+  const Icon = tone === "success" ? CheckCircle2 : tone === "warning" ? LoaderCircle : tone === "danger" ? CircleAlert : tone === "info" ? Info : Clock3;
+  const label = typeof children === "string" || typeof children === "number" ? String(children) : "Status";
+
   return (
-    <Badge variant="outline" className={cn("rounded-full border px-3 py-0.5 font-medium", toneClasses[tone], className)}>
-      {children}
-    </Badge>
+    <span title={label} aria-label={label} className={cn("grid size-8 shrink-0 place-items-center rounded-lg shadow-soft", toneClasses[tone], className)}>
+      <Icon className={cn("size-4", tone === "warning" && "animate-spin")} aria-hidden />
+    </span>
   );
 }
 
