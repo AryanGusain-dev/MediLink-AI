@@ -25,9 +25,15 @@ import { StatBlock } from "@/components/shared/animated-counter";
 import { StatusBadge } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { healthStats } from "@/data/mock";
+import { useAuth } from "@/contexts/auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -53,7 +59,8 @@ const features = [
   {
     icon: HeartPulse,
     title: "AI Health Records",
-    description: "A structured, longitudinal record built from every document you upload — ready for FHIR export.",
+    description:
+      "A structured, longitudinal record built from every document you upload — ready for FHIR export.",
     status: "live" as const,
   },
   {
@@ -65,7 +72,8 @@ const features = [
   {
     icon: ShieldCheck,
     title: "Secure Sharing",
-    description: "Field-level consent. Share only blood group and allergies, or a full clinical picture.",
+    description:
+      "Field-level consent. Share only blood group and allergies, or a full clinical picture.",
     status: "live" as const,
   },
   {
@@ -162,6 +170,8 @@ const faqs = [
 ];
 
 function LandingPage() {
+  const { session } = useAuth();
+
   return (
     <div className="min-h-dvh bg-background">
       <MarketingNav />
@@ -170,12 +180,22 @@ function LandingPage() {
         {/* Hero */}
         <section className="relative overflow-hidden">
           <div className="surface-grid absolute inset-0 opacity-60" aria-hidden />
-          <div className="absolute -left-32 top-0 size-96 rounded-full bg-primary/10 blur-3xl" aria-hidden />
-          <div className="absolute -right-24 top-32 size-80 rounded-full bg-teal/15 blur-3xl" aria-hidden />
+          <div
+            className="absolute -left-32 top-0 size-96 rounded-full bg-primary/10 blur-3xl"
+            aria-hidden
+          />
+          <div
+            className="absolute -right-24 top-32 size-80 rounded-full bg-teal/15 blur-3xl"
+            aria-hidden
+          />
 
           <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-6 pb-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:pt-10 lg:pb-24">
             <div>
-              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
                 <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold text-primary shadow-soft">
                   <Sparkles className="size-3.5" aria-hidden />
                   AI-ready health records
@@ -188,7 +208,8 @@ function LandingPage() {
                 transition={{ duration: 0.55, delay: 0.05 }}
                 className="mt-6 font-display text-4xl font-extrabold leading-[1.08] text-foreground sm:text-5xl lg:text-6xl"
               >
-                Your entire medical history, <span className="gradient-text">secure and shareable</span> in seconds.
+                Your entire medical history,{" "}
+                <span className="gradient-text">secure and shareable</span> in seconds.
               </motion.h1>
 
               <motion.p
@@ -197,8 +218,9 @@ function LandingPage() {
                 transition={{ duration: 0.55, delay: 0.12 }}
                 className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground"
               >
-                MediLink AI keeps every report, prescription and scan in one encrypted vault — then lets you share
-                precisely the right fields with a doctor, hospital or first responder.
+                MediLink AI keeps every report, prescription and scan in one encrypted vault — then
+                lets you share precisely the right fields with a doctor, hospital or first
+                responder.
               </motion.p>
 
               <motion.div
@@ -207,24 +229,37 @@ function LandingPage() {
                 transition={{ duration: 0.55, delay: 0.18 }}
                 className="mt-8 flex flex-wrap gap-3"
               >
-                <Button asChild size="lg" className="rounded-xl shadow-glow">
-                  <Link to="/register">
-                    Create your health vault
-                    <ArrowRight className="size-4" aria-hidden />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="rounded-xl">
-                  <Link to="/dashboard">Explore the dashboard</Link>
-                </Button>
+                {session ? (
+                  <Button asChild size="lg" className="rounded-xl shadow-glow">
+                    <Link to="/dashboard">
+                      Go to Dashboard
+                      <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button asChild size="lg" className="rounded-xl shadow-glow">
+                      <Link to="/register">
+                        Create your health vault
+                        <ArrowRight className="size-4" aria-hidden />
+                      </Link>
+                    </Button>
+                    <Button asChild size="lg" variant="outline" className="rounded-xl">
+                      <Link to="/dashboard">Explore the dashboard</Link>
+                    </Button>
+                  </>
+                )}
               </motion.div>
 
               <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                {["AES-256 encrypted", "Consent-first sharing", "Revoke access anytime"].map((item) => (
-                  <li key={item} className="flex items-center gap-2">
-                    <CheckCircle2 className="size-4 text-success" aria-hidden />
-                    {item}
-                  </li>
-                ))}
+                {["AES-256 encrypted", "Consent-first sharing", "Revoke access anytime"].map(
+                  (item) => (
+                    <li key={item} className="flex items-center gap-2">
+                      <CheckCircle2 className="size-4 text-success" aria-hidden />
+                      {item}
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
 
@@ -288,10 +323,16 @@ function LandingPage() {
                       <span className="grid size-11 place-items-center rounded-2xl bg-accent text-accent-foreground">
                         <feature.icon className="size-5" aria-hidden />
                       </span>
-                      {feature.status === "soon" ? <StatusBadge tone="warning">Coming soon</StatusBadge> : null}
+                      {feature.status === "soon" ? (
+                        <StatusBadge tone="warning">Coming soon</StatusBadge>
+                      ) : null}
                     </div>
-                    <h3 className="mt-6 font-display text-lg font-semibold text-foreground">{feature.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+                    <h3 className="mt-6 font-display text-lg font-semibold text-foreground">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {feature.description}
+                    </p>
                   </Card>
                 </Reveal>
               ))}
@@ -318,8 +359,12 @@ function LandingPage() {
                     <span className="mt-4 grid size-11 place-items-center rounded-2xl bg-teal/15 text-teal">
                       <step.icon className="size-5" aria-hidden />
                     </span>
-                    <h3 className="mt-4 font-display text-base font-semibold text-foreground">{step.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.text}</p>
+                    <h3 className="mt-4 font-display text-base font-semibold text-foreground">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {step.text}
+                    </p>
                   </li>
                 </Reveal>
               ))}
@@ -343,16 +388,25 @@ function LandingPage() {
                         <Star key={s} className="size-4 fill-current" aria-hidden />
                       ))}
                     </div>
-                    <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-foreground">"{t.quote}"</blockquote>
+                    <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-foreground">
+                      "{t.quote}"
+                    </blockquote>
                     <figcaption className="mt-6 flex items-center gap-3">
                       <Avatar className="size-9">
                         <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                          {t.name.split(" ").map((p) => p[0]).join("")}
+                          {t.name
+                            .split(" ")
+                            .map((p) => p[0])
+                            .join("")}
                         </AvatarFallback>
                       </Avatar>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-foreground">{t.name}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{t.role}</span>
+                        <span className="block truncate text-sm font-semibold text-foreground">
+                          {t.name}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {t.role}
+                        </span>
                       </span>
                     </figcaption>
                   </figure>
@@ -365,7 +419,10 @@ function LandingPage() {
         {/* FAQ */}
         <section id="faq" className="scroll-mt-20 py-20">
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <SectionHeading eyebrow="FAQ" title="Questions people ask before trusting us with their records" />
+            <SectionHeading
+              eyebrow="FAQ"
+              title="Questions people ask before trusting us with their records"
+            />
             <Accordion type="single" collapsible className="mt-10 space-y-3">
               {faqs.map((faq, i) => (
                 <AccordionItem
@@ -376,7 +433,9 @@ function LandingPage() {
                   <AccordionTrigger className="text-left font-display text-base font-semibold hover:no-underline">
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm leading-relaxed text-muted-foreground">{faq.a}</AccordionContent>
+                  <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
+                    {faq.a}
+                  </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
@@ -396,17 +455,25 @@ function LandingPage() {
                   Free to start. No card required. Your data stays yours, always.
                 </p>
                 <div className="mt-8 flex flex-wrap justify-center gap-3">
-                  <Button asChild size="lg" variant="secondary" className="rounded-xl">
-                    <Link to="/register">Create free account</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="outline"
-                    className="rounded-xl border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                  >
-                    <Link to="/login">Sign in</Link>
-                  </Button>
+                  {session ? (
+                    <Button asChild size="lg" variant="secondary" className="rounded-xl">
+                      <Link to="/dashboard">Go to Dashboard</Link>
+                    </Button>
+                  ) : (
+                    <>
+                      <Button asChild size="lg" variant="secondary" className="rounded-xl">
+                        <Link to="/register">Create free account</Link>
+                      </Button>
+                      <Button
+                        asChild
+                        size="lg"
+                        variant="outline"
+                        className="rounded-xl border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                      >
+                        <Link to="/login">Sign in</Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

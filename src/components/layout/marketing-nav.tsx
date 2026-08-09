@@ -4,6 +4,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/shared/logo";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth";
 
 const links = [
   { label: "Features", href: "/#features" },
@@ -13,6 +14,7 @@ const links = [
 ];
 
 export function MarketingNav() {
+  const { session } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -30,7 +32,10 @@ export function MarketingNav() {
         scrolled ? "border-b border-border bg-background/85 backdrop-blur-md" : "bg-transparent",
       )}
     >
-      <nav className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6" aria-label="Main">
+      <nav
+        className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6"
+        aria-label="Main"
+      >
         <Link to="/" className="shrink-0">
           <Logo />
         </Link>
@@ -49,12 +54,20 @@ export function MarketingNav() {
         </ul>
 
         <div className="ml-auto hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/login">Sign in</Link>
-          </Button>
-          <Button asChild size="sm" className="rounded-xl shadow-soft">
-            <Link to="/register">Get started free</Link>
-          </Button>
+          {session ? (
+            <Button asChild size="sm" className="rounded-xl shadow-soft">
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/login">Sign in</Link>
+              </Button>
+              <Button asChild size="sm" className="rounded-xl shadow-soft">
+                <Link to="/register">Get started free</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <Button
@@ -85,12 +98,20 @@ export function MarketingNav() {
             ))}
           </ul>
           <div className="mt-3 grid gap-2">
-            <Button asChild variant="outline">
-              <Link to="/login">Sign in</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/register">Get started free</Link>
-            </Button>
+            {session ? (
+              <Button asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild variant="outline">
+                  <Link to="/login">Sign in</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/register">Get started free</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       ) : null}
