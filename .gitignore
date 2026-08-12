@@ -50,6 +50,7 @@ vite.config.ts.timestamp-*
 *.sln
 *.sw?
 
+
 # OS-specific files
 .DS_Store
 .DS_Store?
@@ -64,3 +65,19 @@ supabase/.temp
 
 backend/venv
 backend/.env
+
+
+drug-to-drug-interaction-using-XAI/savepoints/0/model_checkpoint
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+
+# Python Cache
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# DDI Specific Exclusions
+drug-to-drug-interaction-using-XAI/predict_ddi_xai/*.png

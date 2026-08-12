@@ -15,3 +15,13 @@ pypdf>=4.3.0
 # Dev / test
 pytest>=8.2.0
 pytest-asyncio>=0.23.0
+
+
+torch
+numpy
+pandas
+scikit-learn
+shap
+matplotlib
+joblib
+pydantic

@@ -473,24 +473,28 @@ function ProfilePage() {
 
 function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }: any) {
   const p = {
-    ...healthProfile,
-    ...(dbProfile ? {
-      fullName: dbProfile.full_name || healthProfile.fullName,
-      age: dbProfile.dob ? Math.floor((new Date().getTime() - new Date(dbProfile.dob).getTime()) / 31557600000) : healthProfile.age,
-      gender: dbProfile.gender || healthProfile.gender,
-      bloodGroup: dbProfile.blood_group || healthProfile.bloodGroup,
-      heightCm: dbProfile.height_cm || healthProfile.heightCm,
-      weightKg: dbProfile.weight_kg || healthProfile.weightKg,
-      emergencyContacts: dbContacts?.length > 0 ? dbContacts.map((c: any) => ({ ...c, relation: c.relationship })) : healthProfile.emergencyContacts,
-      conditions: dbConditions?.length > 0 ? dbConditions : healthProfile.conditions,
-      medications: dbMedications?.length > 0 ? dbMedications : healthProfile.medications,
-      summary: dbProfile.health_summary || healthProfile.summary,
-      address: dbProfile.address || healthProfile.address,
-      userId: dbProfile.id || healthProfile.userId,
-    } : {})
+    fullName: dbProfile?.full_name || "",
+    age: dbProfile?.dob ? Math.floor((new Date().getTime() - new Date(dbProfile.dob).getTime()) / 31557600000) : "",
+    gender: dbProfile?.gender || "",
+    bloodGroup: dbProfile?.blood_group || "",
+    heightCm: dbProfile?.height_cm || null,
+    weightKg: dbProfile?.weight_kg || null,
+    emergencyContacts: dbContacts?.length > 0 ? dbContacts.map((c: any) => ({ ...c, relation: c.relationship })) : [],
+    conditions: dbConditions?.length > 0 ? dbConditions : [],
+    medications: dbMedications?.length > 0 ? dbMedications : [],
+    summary: dbProfile?.health_summary || "",
+    address: dbProfile?.address || "",
+    userId: dbProfile?.id || "",
+    dob: dbProfile?.dob || "",
+    insurance: { provider: "", policyNumber: "" },
+    allergies: [],
+    vaccinations: [],
+    doctors: [],
+    surgeries: "",
+    organDonorStatus: "",
   };
-  const bmi = (p.weightKg / (p.heightCm / 100) ** 2).toFixed(1);
-  const activeQr = qrCodes.some((item) => item.status === "active");
+  const bmi = (p.weightKg && p.heightCm) ? (p.weightKg / (p.heightCm / 100) ** 2).toFixed(1) : "";
+  const activeQr = false;
 
   return (
     <div className="space-y-6">
@@ -504,15 +508,16 @@ function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }:
       />
 
       <Widget title="Patient Information" icon={UserRound} delay={0}>
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]"><dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3"><div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Full name</dt><dd className="mt-1 flex items-center gap-2 text-base font-semibold text-foreground">{p.fullName}<StatusBadge tone="success">Verified</StatusBadge></dd></div><PassportDetail label="Patient ID" value={`ML-${p.userId.replace("usr_", "")}`} /><PassportDetail label="Age" value={`${p.age} years`} /><PassportDetail label="Gender" value={p.gender} /><PassportDetail label="Date of birth" value="14 May 1994" /><PassportDetail label="Blood group" value={p.bloodGroup} /><PassportDetail label="Location" value="Bengaluru, Karnataka" /><PassportDetail label="Phone" value={currentUser.phone} /><PassportDetail label="Email" value={currentUser.email} /></dl><dl className="grid content-start gap-y-5 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"><PassportDetail label="Insurance provider" value={p.insurance.provider} /><PassportDetail label="Policy number" value={p.insurance.policyNumber} /><PassportDetail label="Last updated" value="18 Jul 2026" /></dl></div>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]"><dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3"><div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Full name</dt><dd className="mt-1 flex items-center gap-2 text-base font-semibold text-foreground">{p.fullName}<StatusBadge tone="success">Verified</StatusBadge></dd></div><PassportDetail label="Patient ID" value={p.userId ? `ML-${p.userId.replace("usr_", "")}` : ""} /><PassportDetail label="Age" value={p.age ? `${p.age} years` : ""} /><PassportDetail label="Gender" value={p.gender} /><PassportDetail label="Date of birth" value={p.dob ? formatDate(p.dob) : ""} /><PassportDetail label="Blood group" value={p.bloodGroup} /><PassportDetail label="Location" value={p.address} /><PassportDetail label="Phone" value={dbProfile?.phone || ""} /><PassportDetail label="Email" value={dbProfile?.email || ""} /></dl><dl className="grid content-start gap-y-5 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"><PassportDetail label="Insurance provider" value={p.insurance.provider} /><PassportDetail label="Policy number" value={p.insurance.policyNumber} /><PassportDetail label="Last updated" value={dbProfile?.updated_at ? formatDate(dbProfile.updated_at) : ""} /></dl></div>
       </Widget>
 
       <Widget title="Emergency Summary" icon={ShieldAlert} delay={0.05} action={<Button variant="ghost" size="sm" className="rounded-lg text-xs">View Full</Button>} className="[&>div]:border-primary/25 [&>div]:bg-primary/[0.025]">
-        <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><EmergencyDetail label="Blood Group" value={p.bloodGroup} icon={Droplets} /><EmergencyDetail label="Allergies" value={p.allergies.map((item: any) => item.allergen).join(", ")} icon={CircleAlert} /><EmergencyDetail label="Chronic Conditions" value={p.conditions.map((item: any) => item.name).join(", ")} icon={HeartPulse} /><EmergencyDetail label="Current Medications" value={`${p.medications.length} active`} icon={Pill} /><EmergencyDetail label="Surgeries" value="No surgical history" icon={ClipboardList} /><EmergencyDetail label="Organ Donor Status" value="Not registered" icon={Heart} /><EmergencyDetail label="Emergency QR Status" value={activeQr ? "Active" : "Inactive"} icon={QrCode} status={activeQr ? "success" : "neutral"} /><EmergencyDetail label="Emergency Contact" value={`${p.emergencyContacts[0]?.name} · ${p.emergencyContacts[0]?.phone}`} icon={UserCheck} /></dl>
+        <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><EmergencyDetail label="Blood Group" value={p.bloodGroup} icon={Droplets} /><EmergencyDetail label="Allergies" value={p.allergies.map((item: any) => item.allergen).join(", ")} icon={CircleAlert} /><EmergencyDetail label="Chronic Conditions" value={p.conditions.map((item: any) => item.name).join(", ")} icon={HeartPulse} /><EmergencyDetail label="Current Medications" value={p.medications.length > 0 ? `${p.medications.length} active` : ""} icon={Pill} /><EmergencyDetail label="Surgeries" value={p.surgeries} icon={ClipboardList} /><EmergencyDetail label="Organ Donor Status" value={p.organDonorStatus} icon={Heart} /><EmergencyDetail label="Emergency QR Status" value={activeQr ? "Active" : "Inactive"} icon={QrCode} status={activeQr ? "success" : "neutral"} /><EmergencyDetail label="Emergency Contact" value={p.emergencyContacts.length > 0 ? `${p.emergencyContacts[0]?.name} · ${p.emergencyContacts[0]?.phone}` : ""} icon={UserCheck} /></dl>
         <div className="mt-6 border-t border-border pt-5">
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <p className="mb-3 text-sm font-medium text-foreground">Emergency contacts</p>
+            {p.emergencyContacts.length === 0 ? <p className="text-sm text-muted-foreground">No emergency contacts listed.</p> : (
             <ul className="space-y-3">
               {p.emergencyContacts.map((contact: any) => (
                 <li key={contact.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
@@ -524,26 +529,29 @@ function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }:
                 </li>
               ))}
             </ul>
+            )}
           </div>
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3">
               <PassportDetail label="Blood group" value={p.bloodGroup} />
-              <PassportDetail label="Chronic diseases" value={`${p.conditions.length} recorded`} />
+              <PassportDetail label="Chronic diseases" value={p.conditions.length > 0 ? `${p.conditions.length} recorded` : ""} />
             </div>
             <div>
               <p className="mb-2 text-sm font-medium text-foreground">Current medications</p>
+              {p.medications.length === 0 ? <p className="text-sm text-muted-foreground">No current medications.</p> : (
               <ul className="space-y-2">
                 {p.medications.map((medication: any) => (
                   <li key={medication.id} className="rounded-xl border border-border p-3 text-sm">
-                    <span className="font-medium text-foreground">{medication.name} — {medication.dosage}</span>
+                    <span className="font-medium text-foreground">{medication.name} {medication.dosage ? `— ${medication.dosage}` : ""}</span>
                     <span className="block text-xs text-muted-foreground">{medication.frequency}</span>
                   </li>
                 ))}
               </ul>
+              )}
             </div>
             <div className="rounded-xl border border-border bg-muted/30 p-4">
               <p className="text-sm font-medium text-foreground">Important medical notes</p>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{p.summary}</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{p.summary || "No notes available."}</p>
             </div>
           </div>
         </div>
@@ -554,6 +562,7 @@ function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }:
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <h3 className="mb-3 text-sm font-semibold text-foreground">Allergies</h3>
+            {p.allergies.length === 0 ? <p className="text-sm text-muted-foreground">No allergies recorded.</p> : (
             <ul className="space-y-3">
               {p.allergies.map((allergy: any) => (
                 <li key={allergy.id} className="rounded-xl border border-border p-3">
@@ -565,9 +574,11 @@ function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }:
                 </li>
               ))}
             </ul>
+            )}
           </div>
           <div>
             <h3 className="mb-3 text-sm font-semibold text-foreground">Medical conditions</h3>
+            {p.conditions.length === 0 ? <p className="text-sm text-muted-foreground">No medical conditions recorded.</p> : (
             <ul className="space-y-3">
               {p.conditions.map((condition: any) => (
                 <li key={condition.id} className="rounded-xl border border-border p-3">
@@ -579,19 +590,20 @@ function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }:
                 </li>
               ))}
             </ul>
+            )}
           </div>
         </div>
       </Widget>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Widget title="Health Overview" icon={HeartPulse} delay={0.12}><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Blood Pressure", "118/76"], ["Blood Sugar", "96"], ["Heart Rate", "72"], ["BMI", bmi]].map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-surface p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 font-display text-lg font-bold text-foreground">{value}</p></div>)}</div></Widget>
-        <Widget title="Medical Conditions" icon={HeartPulse} delay={0.14}><div className="flex flex-wrap gap-2">{[...p.conditions.map((item: any) => item.name), "No Known Heart Disease"].map((condition: any) => <span key={condition} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground">{condition}</span>)}</div></Widget>
-        <Widget title="Current Medications" icon={Pill} delay={0.16}><div className="overflow-x-auto"><table className="w-full min-w-[34rem] text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3">Medication</th><th className="pb-3">Dosage</th><th className="pb-3">Frequency</th><th className="pb-3">Prescribed By</th></tr></thead><tbody className="divide-y divide-border">{p.medications.map((m: any) => <tr key={m.id}><td className="py-3 font-medium text-foreground">{m.name}</td><td>{m.dosage}</td><td>{m.frequency}</td><td>{m.prescribedBy}</td></tr>)}</tbody></table></div></Widget>
-        <Widget title="Recent Records" icon={FileText} delay={0.18} action={<Button variant="ghost" size="sm" className="text-xs">View All</Button>}><ul className="divide-y divide-border">{documents.slice(0, 3).map((d: any) => <li key={d.id} className="flex items-center gap-3 py-3 first:pt-0"><FileText className="size-4 text-primary" aria-hidden /><div><p className="text-sm font-medium text-foreground">{d.name || d.title || "Document"}</p><p className="text-xs text-muted-foreground">{formatDate(d.uploadedAt || d.uploaded_at)} · {d.category}</p></div></li>)}</ul></Widget>
-        <Widget title="AI Health Insights" icon={CheckCircle2} delay={0.2}><ul className="space-y-3">{["Thyroid levels are within range.", "Your influenza vaccine is due this month.", "Blood pressure and BMI are in a healthy range."].map((insight, i) => <li key={insight} className="flex items-center gap-3 rounded-xl border border-border p-3"><CheckCircle2 className="size-4 text-success" aria-hidden /><p className="flex-1 text-sm text-foreground">{insight}</p><StatusBadge tone={i === 1 ? "warning" : "success"}>Status</StatusBadge></li>)}</ul><Button variant="ghost" size="sm" className="mt-4 px-0 text-primary">Explain with AI <ChevronRight className="size-4" /></Button></Widget>
-        <Widget title="Health Risk Score" icon={ShieldCheck} delay={0.22}><div className="flex items-center gap-6"><div className="grid size-28 place-items-center rounded-full border-8 border-primary/20 text-center"><span className="font-display text-2xl font-bold text-primary">82</span></div><dl className="flex-1 space-y-3">{[["Cardiovascular Risk", "success"], ["Diabetes Risk", "success"], ["Lifestyle Risk", "warning"]].map(([label, tone]) => <div key={label} className="flex justify-between"><dt className="text-sm text-muted-foreground">{label}</dt><StatusBadge tone={tone as "success" | "warning"}>Risk</StatusBadge></div>)}</dl></div></Widget>
-        <Widget title="Immunization Status" icon={Syringe} delay={0.24}><ul className="divide-y divide-border">{p.vaccinations.map((v: any) => <li key={v.id} className="flex items-center gap-3 py-3 first:pt-0"><div className="flex-1"><p className="text-sm font-medium text-foreground">{v.name}</p><p className="text-xs text-muted-foreground">Dose {v.doses}</p></div><StatusBadge tone={v.status === "complete" ? "success" : "warning"}>{v.status}</StatusBadge></li>)}</ul></Widget>
-        <Widget title="Active Shares & Access" icon={Share2} delay={0.26}><ul className="divide-y divide-border">{[[Stethoscope, p.doctors[0]?.name ?? "Doctor", p.doctors[0]?.specialty ?? "Care team"], [Hospital, p.doctors[0]?.hospital ?? "Hospital", "Hospital access"], [UserRound, "Family Access", "Family member"]].map(([Icon, name, role]) => <li key={String(role)} className="flex items-center gap-3 py-3 first:pt-0"><Icon className="size-4 text-primary" /><div className="flex-1"><p className="text-sm font-medium text-foreground">{String(name)}</p><p className="text-xs text-muted-foreground">{String(role)}</p></div><StatusBadge tone="success">Active</StatusBadge></li>)}</ul><Button asChild variant="ghost" size="sm" className="mt-3 px-0 text-primary"><Link to="/dashboard/share">View all shared profiles <ChevronRight className="size-4" /></Link></Button></Widget>
+        <Widget title="Health Overview" icon={HeartPulse} delay={0.12}><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Blood Pressure", ""], ["Blood Sugar", ""], ["Heart Rate", ""], ["BMI", bmi || ""]].map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-surface p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 font-display text-lg font-bold text-foreground">{value}</p></div>)}</div></Widget>
+        <Widget title="Medical Conditions" icon={HeartPulse} delay={0.14}><div className="flex flex-wrap gap-2">{p.conditions.length > 0 ? p.conditions.map((item: any) => <span key={item.id || item.name} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground">{item.name}</span>) : <span className="text-sm text-muted-foreground">No conditions recorded</span>}</div></Widget>
+        <Widget title="Current Medications" icon={Pill} delay={0.16}><div className="overflow-x-auto"><table className="w-full min-w-[34rem] text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3">Medication</th><th className="pb-3">Dosage</th><th className="pb-3">Frequency</th><th className="pb-3">Prescribed By</th></tr></thead><tbody className="divide-y divide-border">{p.medications.map((m: any) => <tr key={m.id}><td className="py-3 font-medium text-foreground">{m.name}</td><td>{m.dosage}</td><td>{m.frequency}</td><td>{m.prescribedBy}</td></tr>)}</tbody></table>{p.medications.length === 0 && <p className="text-sm text-muted-foreground py-2">No medications found.</p>}</div></Widget>
+        <Widget title="Recent Records" icon={FileText} delay={0.18} action={<Button variant="ghost" size="sm" className="text-xs">View All</Button>}><p className="text-sm text-muted-foreground py-2">No recent records available.</p></Widget>
+        <Widget title="AI Health Insights" icon={CheckCircle2} delay={0.2}><p className="text-sm text-muted-foreground py-2">No insights available.</p><Button variant="ghost" size="sm" className="mt-4 px-0 text-primary">Explain with AI <ChevronRight className="size-4" /></Button></Widget>
+        <Widget title="Health Risk Score" icon={ShieldCheck} delay={0.22}><div className="flex items-center gap-6"><div className="grid size-28 place-items-center rounded-full border-8 border-primary/20 text-center"><span className="font-display text-2xl font-bold text-primary">--</span></div><dl className="flex-1 space-y-3">{[["Cardiovascular Risk", "neutral"], ["Diabetes Risk", "neutral"], ["Lifestyle Risk", "neutral"]].map(([label, tone]) => <div key={label} className="flex justify-between"><dt className="text-sm text-muted-foreground">{label}</dt><StatusBadge tone={tone as "neutral"}>Risk</StatusBadge></div>)}</dl></div></Widget>
+        <Widget title="Immunization Status" icon={Syringe} delay={0.24}><ul className="divide-y divide-border">{p.vaccinations.map((v: any) => <li key={v.id} className="flex items-center gap-3 py-3 first:pt-0"><div className="flex-1"><p className="text-sm font-medium text-foreground">{v.name}</p><p className="text-xs text-muted-foreground">Dose {v.doses}</p></div><StatusBadge tone={v.status === "complete" ? "success" : "warning"}>{v.status}</StatusBadge></li>)}</ul>{p.vaccinations.length === 0 && <p className="text-sm text-muted-foreground py-2">No vaccinations found.</p>}</Widget>
+        <Widget title="Active Shares & Access" icon={Share2} delay={0.26}><ul className="divide-y divide-border">{p.doctors.length > 0 ? [[Stethoscope, p.doctors[0]?.name ?? "Doctor", p.doctors[0]?.specialty ?? "Care team"], [Hospital, p.doctors[0]?.hospital ?? "Hospital", "Hospital access"], [UserRound, "Family Access", "Family member"]].map(([Icon, name, role]) => <li key={String(role)} className="flex items-center gap-3 py-3 first:pt-0"><Icon className="size-4 text-primary" /><div className="flex-1"><p className="text-sm font-medium text-foreground">{String(name)}</p><p className="text-xs text-muted-foreground">{String(role)}</p></div><StatusBadge tone="success">Active</StatusBadge></li>) : null}</ul>{p.doctors.length === 0 && <p className="text-sm text-muted-foreground py-2">No active shares found.</p>}<Button asChild variant="ghost" size="sm" className="mt-3 px-0 text-primary"><Link to="/dashboard/share">View all shared profiles <ChevronRight className="size-4" /></Link></Button></Widget>
       </div>
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft"><ShieldCheck className="size-5 shrink-0 text-success" /><p className="text-sm text-muted-foreground">Your data is secure and encrypted. You are in control of your health information.</p></div>
     </div>

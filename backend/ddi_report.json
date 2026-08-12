@@ -1,0 +1,84 @@
+{
+  "profile_id": null,
+  "user_name": null,
+  "status": "SUCCESS",
+  "message": "Successfully evaluated 3 drug combination(s) for user user. Found 3 combination(s) with potential interactions (3 high/unknown risk).",
+  "total_medications": 3,
+  "medications_list": [
+    "Aspirin",
+    "Warfarin",
+    "Metformin"
+  ],
+  "total_combinations": 3,
+  "combinations_with_interactions": 3,
+  "high_risk_combinations": 3,
+  "generated_at": "2026-08-11T23:06:11.928944+00:00",
+  "combinations": [
+    {
+      "id": "aspirin__warfarin",
+      "drug_a": "Aspirin",
+      "drug_b": "Warfarin",
+      "pair_label": "Aspirin + Warfarin",
+      "has_potential_interaction": true,
+      "matched_in_trained_model": true,
+      "drug_a_matched": true,
+      "drug_b_matched": true,
+      "knowledge_gap_warning": null,
+      "interactions": [
+        {
+          "label_idx": 18,
+          "effect_description": "[16]",
+          "confidence": 1.0,
+          "severity": "HIGH"
+        }
+      ],
+      "overall_risk_level": "HIGH",
+      "xai_explanation": "Interaction driven primarily by Gene Ontology pathways (biological cell functions) (52.9% impact) and Target Similarity (protein/receptor binding) (31.1% impact), indicating both Nitroaspirin and Warfarin share active biological mechanism pathways.",
+      "recommendation": "Potential interaction detected between Nitroaspirin and Warfarin. Top effect: [16]. Consult your physician or pharmacist."
+    },
+    {
+      "id": "aspirin__metformin",
+      "drug_a": "Aspirin",
+      "drug_b": "Metformin",
+      "pair_label": "Aspirin + Metformin",
+      "has_potential_interaction": true,
+      "matched_in_trained_model": true,
+      "drug_a_matched": true,
+      "drug_b_matched": true,
+      "knowledge_gap_warning": null,
+      "interactions": [
+        {
+          "label_idx": 40,
+          "effect_description": "[37]",
+          "confidence": 1.0,
+          "severity": "HIGH"
+        }
+      ],
+      "overall_risk_level": "HIGH",
+      "xai_explanation": "Interaction driven primarily by Gene Ontology pathways (biological cell functions) (55.0% impact) and Target Similarity (protein/receptor binding) (33.7% impact), indicating both Nitroaspirin and Metformin share active biological mechanism pathways.",
+      "recommendation": "Potential interaction detected between Nitroaspirin and Metformin. Top effect: [37]. Consult your physician or pharmacist."
+    },
+    {
+      "id": "warfarin__metformin",
+      "drug_a": "Warfarin",
+      "drug_b": "Metformin",
+      "pair_label": "Warfarin + Metformin",
+      "has_potential_interaction": true,
+      "matched_in_trained_model": true,
+      "drug_a_matched": true,
+      "drug_b_matched": true,
+      "knowledge_gap_warning": null,
+      "interactions": [
+        {
+          "label_idx": 100,
+          "effect_description": "[90]",
+          "confidence": 0.9934,
+          "severity": "HIGH"
+        }
+      ],
+      "overall_risk_level": "HIGH",
+      "xai_explanation": "Interaction driven primarily by Gene Ontology pathways (biological cell functions) (68.3% impact) and Target Similarity (protein/receptor binding) (24.9% impact), indicating both Warfarin and Metformin share active biological mechanism pathways.",
+      "recommendation": "Potential interaction detected between Warfarin and Metformin. Top effect: [90]. Consult your physician or pharmacist."
+    }
+  ]
+}

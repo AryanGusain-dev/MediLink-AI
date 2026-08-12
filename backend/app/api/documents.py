@@ -75,6 +75,14 @@ async def _run_pipeline(
             model_used=settings.gemini_model,
         )
 
+        # Layer 6 — Automatic DDI Pipeline Trigger (Silent Background Execution)
+        try:
+            log.info("pipeline.ddi_trigger_start", profile_id=profile_id)
+            from app.services.ddi_service import run_ddi_pipeline_for_user
+            await run_ddi_pipeline_for_user(supabase=supabase, profile_id=profile_id)
+        except Exception as ddi_err:
+            log.warning("pipeline.ddi_trigger_failed", profile_id=profile_id, error=str(ddi_err))
+
         log.info("pipeline.complete", document_id=document_id)
 
     except Exception as exc:
