@@ -3,7 +3,7 @@ DDI (Drug-Drug Interaction) Engine and Service Module.
 
 Handles:
 1. User medication retrieval from Supabase database.
-2. DDI deep learning model loading from the `drug-tp-drug-interaction-using-XAI` sub-repository.
+2. DDI deep learning model loading from the `drug-to-drug-interaction-using-XAI` sub-repository.
 3. 2-drug combination generation & tensor inference.
 4. Handling missing dataset medications with clinical knowledge-gap warnings.
 5. Formatting app-ready `UserDDIReport` payloads.
@@ -70,14 +70,14 @@ from app.models.ddi import (
 
 
 def find_subrepo_path() -> Path:
-    """Find absolute path to the drug-tp-drug-interaction-using-XAI sub-repository."""
+    """Find absolute path to the drug-to-drug-interaction-using-XAI sub-repository."""
     # Try relative to backend directory or workspace root
     current = Path(__file__).resolve().parent
     candidates = [
-        current.parent.parent / "drug-tp-drug-interaction-using-XAI",
-        current.parent.parent.parent / "drug-tp-drug-interaction-using-XAI",
-        Path("c:/Users/Aryan Gusain/OneDrive/Desktop/New folder/medi-link-ai-core/drug-tp-drug-interaction-using-XAI"),
-        Path.cwd() / "drug-tp-drug-interaction-using-XAI",
+        current.parent.parent / "drug-to-drug-interaction-using-XAI",
+        current.parent.parent.parent / "drug-to-drug-interaction-using-XAI",
+        Path("c:/Users/Aryan Gusain/OneDrive/Desktop/New folder/medi-link-ai-core/drug-to-drug-interaction-using-XAI"),
+        Path.cwd() / "drug-to-drug-interaction-using-XAI",
     ]
     
     for candidate in candidates:
@@ -85,7 +85,7 @@ def find_subrepo_path() -> Path:
             return candidate.resolve()
             
     raise FileNotFoundError(
-        "Could not locate 'drug-tp-drug-interaction-using-XAI' sub-repository directory. "
+        "Could not locate 'drug-to-drug-interaction-using-XAI' sub-repository directory. "
         "Please ensure it is cloned in the main repository root."
     )
 

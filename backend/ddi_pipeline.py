@@ -3,7 +3,7 @@
 MediLink AI — Drug-Drug Interaction (DDI) Pipeline CLI Script.
 
 Collects drug names from the user's database, creates all 2-drug combinations,
-executes the deep learning DDI prediction model from `drug-tp-drug-interaction-using-XAI`,
+executes the deep learning DDI prediction model from `drug-to-drug-interaction-using-XAI`,
 and exports an app-ready structured JSON report (`UserDDIReport`).
 
 Usage:

@@ -8,6 +8,7 @@ import {
   QrCode,
   ScanLine,
   Share2,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import {
@@ -31,6 +32,7 @@ import { storage } from "@/data/mock";
 const mainNav = [
   { label: "Overview", to: "/dashboard", icon: LayoutDashboard, exact: true },
   { label: "Patient Passport", to: "/dashboard/profile", icon: UserRound },
+  { label: "AI Intelligence", to: "/dashboard/ai", icon: Sparkles },
   { label: "Documents", to: "/dashboard/documents", icon: FileText },
   { label: "Report Scanner", to: "/dashboard/scanner", icon: ScanLine },
   { label: "Share Profiles", to: "/dashboard/share", icon: Share2 },

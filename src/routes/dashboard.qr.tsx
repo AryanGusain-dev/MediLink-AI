@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Copy, CopyPlus, Download, Pencil, Power, Printer, QrCode, Trash2 } from "lucide-react";
@@ -17,9 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { qrCodes as seedQrCodes, shareProfiles } from "@/data/mock";
-import type { QRCodeItem, ShareProfile } from "@/types";
 import { formatDate } from "@/lib/format";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/auth";
+import type { DBQRCode, DBShareProfile } from "./dashboard.share";
 
 export const Route = createFileRoute("/dashboard/qr")({
   head: () => ({
@@ -33,70 +34,120 @@ export const Route = createFileRoute("/dashboard/qr")({
   component: QRPage,
 });
 
-const BASE_URL = "https://medilink.ai/s/";
-
 function QRPage() {
   const navigate = useNavigate();
-
-  const [profiles] = useState<ShareProfile[]>(() => {
-    const saved = localStorage.getItem("medi-link-share-profiles");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [codes, setCodes] = useState<QRCodeItem[]>(() => {
-    const saved = localStorage.getItem("medi-link-qr-codes");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [renaming, setRenaming] = useState<QRCodeItem | null>(null);
+  const { user } = useAuth();
+  
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<DBShareProfile[]>([]);
+  const [codes, setCodes] = useState<DBQRCode[]>([]);
+  
+  const [renaming, setRenaming] = useState<DBQRCode | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const linkFor = (item: QRCodeItem) => {
-    const profile = profiles.find((p) => p.id === item.shareProfileId);
-    return `${BASE_URL}${profile?.token ?? item.id}`;
+  const BASE_URL = typeof window !== 'undefined' ? `${window.location.origin}/s/` : 'https://medilink.ai/s/';
+
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return;
+      const { data: pData } = await supabase.from("profiles").select("id").eq("auth_user_id", user.id).single();
+      if (pData) {
+        setProfileId(pData.id);
+        const [profRes, qrRes] = await Promise.all([
+          supabase.from("share_profiles").select("*").eq("profile_id", pData.id),
+          supabase.from("qr_codes").select("*").eq("profile_id", pData.id).order('created_at', { ascending: false })
+        ]);
+        if (profRes.data) setProfiles(profRes.data);
+        if (qrRes.data) setCodes(qrRes.data);
+      }
+      setIsLoading(false);
+    }
+    loadData();
+  }, [user]);
+
+  const linkFor = (item: DBQRCode) => {
+    return `${BASE_URL}${item.token}`;
   };
 
   const triggerCreateProfile = () => {
     navigate({ to: "/dashboard/share", search: { create: true } });
   };
 
-  const duplicate = (item: QRCodeItem) => {
-    const next: QRCodeItem[] = [{ ...item, id: `qr_${Date.now()}`, label: `${item.label} (copy)`, scans: 0, createdAt: new Date().toISOString() }, ...codes];
-    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
-    setCodes(next);
-    toast.success("QR code duplicated");
+  const duplicate = async (item: DBQRCode) => {
+    const newToken = Math.random().toString(36).slice(2, 10);
+    const newCode: DBQRCode = {
+      id: crypto.randomUUID(),
+      profile_id: item.profile_id,
+      share_profile_id: item.share_profile_id,
+      label: `${item.label} (copy)`,
+      token: newToken,
+      scan_count: 0,
+      status: 'active',
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      const { error } = await supabase.from("qr_codes").insert(newCode);
+      if (error) throw error;
+      setCodes([newCode, ...codes]);
+      toast.success("QR code duplicated");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to duplicate QR code");
+    }
   };
 
-  const toggleStatus = (id: string) => {
-    const next: QRCodeItem[] = codes.map((c) => (c.id === id ? { ...c, status: (c.status === "active" ? "inactive" : "active") as "active" | "inactive" } : c));
-    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
-    setCodes(next);
+  const toggleStatus = async (item: DBQRCode) => {
+    const newStatus = item.status === "active" ? "inactive" : "active";
+    try {
+      const { error } = await supabase.from("qr_codes").update({ status: newStatus }).eq("id", item.id);
+      if (error) throw error;
+      setCodes(codes.map((c) => (c.id === item.id ? { ...c, status: newStatus } : c)));
+      toast.success(`QR code ${newStatus}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update status");
+    }
   };
 
-  const remove = (id: string) => {
-    const next: QRCodeItem[] = codes.filter((c) => c.id !== id);
-    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
-    setCodes(next);
-    toast.success("QR code deleted");
+  const remove = async (id: string) => {
+    try {
+      const { error } = await supabase.from("qr_codes").delete().eq("id", id);
+      if (error) throw error;
+      setCodes(codes.filter((c) => c.id !== id));
+      toast.success("QR code deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete QR code");
+    }
   };
 
-  const download = (item: QRCodeItem) => {
+  const download = (item: DBQRCode) => {
     const canvas = document.getElementById(`qr-${item.id}`) as HTMLCanvasElement | null;
     if (!canvas) return;
     const url = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${item.label.replace(/\s+/g, "-").toLowerCase()}.png`;
+    link.download = `${item.label.replace(/\\s+/g, "-").toLowerCase()}.png`;
     link.click();
     toast.success("QR image downloaded");
   };
 
-  const confirmRename = () => {
+  const confirmRename = async () => {
     if (!renaming) return;
-    const next = codes.map((c) => (c.id === renaming.id ? { ...c, label: renameValue } : c));
-    localStorage.setItem("medi-link-qr-codes", JSON.stringify(next));
-    setCodes(next);
-    setRenaming(null);
-    toast.success("QR code renamed");
+    try {
+      const { error } = await supabase.from("qr_codes").update({ label: renameValue }).eq("id", renaming.id);
+      if (error) throw error;
+      
+      setCodes(codes.map((c) => (c.id === renaming.id ? { ...c, label: renameValue } : c)));
+      setRenaming(null);
+      toast.success("QR code renamed");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to rename QR code");
+    }
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-muted-foreground">Loading QR codes...</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -126,7 +177,7 @@ function QRPage() {
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {codes.map((item, i) => {
-              const profile = profiles.find((p) => p.id === item.shareProfileId);
+              const profile = profiles.find((p) => p.id === item.share_profile_id);
               return (
                 <motion.div
                   key={item.id}
@@ -141,7 +192,7 @@ function QRPage() {
                       <div className="min-w-0">
                         <p className="truncate font-display text-base font-semibold text-foreground">{item.label}</p>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {profile?.name ?? "Unlinked profile"} · {profile?.fields.length ?? 0} fields
+                          {profile?.name ?? "Unlinked profile"} · {profile?.allowed_fields?.length ?? 0} fields
                         </p>
                       </div>
                       <StatusBadge tone={item.status === "active" ? "success" : "neutral"}>{item.status}</StatusBadge>
@@ -156,11 +207,11 @@ function QRPage() {
                     <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
                       <div className="rounded-xl border border-border bg-surface p-3">
                         <dt className="text-[11px] text-muted-foreground">Created</dt>
-                        <dd className="mt-0.5 font-medium text-foreground">{formatDate(item.createdAt)}</dd>
+                        <dd className="mt-0.5 font-medium text-foreground">{formatDate(item.created_at)}</dd>
                       </div>
                       <div className="rounded-xl border border-border bg-surface p-3">
                         <dt className="text-[11px] text-muted-foreground">Scans</dt>
-                        <dd className="mt-0.5 font-medium text-foreground">{item.scans}</dd>
+                        <dd className="mt-0.5 font-medium text-foreground">{item.scan_count}</dd>
                       </div>
                     </dl>
 
@@ -205,7 +256,7 @@ function QRPage() {
                         size="icon"
                         className="rounded-lg"
                         aria-label={`${item.status === "active" ? "Deactivate" : "Activate"} ${item.label}`}
-                        onClick={() => toggleStatus(item.id)}
+                        onClick={() => toggleStatus(item)}
                       >
                         <Power className="size-4" aria-hidden />
                       </Button>

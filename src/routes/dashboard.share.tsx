@@ -29,9 +29,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { shareFields, shareProfiles as seedProfiles } from "@/data/mock";
-import type { ShareFieldKey, ShareProfile, QRCodeItem } from "@/types";
+import { shareFields } from "@/data/mock";
+import type { ShareFieldKey } from "@/types";
 import { formatDate } from "@/lib/format";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/auth";
 
 type ShareSearchParams = {
   create?: boolean;
@@ -52,122 +54,190 @@ export const Route = createFileRoute("/dashboard/share")({
   component: SharePage,
 });
 
-const BASE_URL = "https://medilink.ai/s/";
-
-const visibilityLabel: Record<ShareProfile["visibility"], string> = {
+const visibilityLabel = {
   "public-link": "Anyone with the link",
   "pin-protected": "PIN protected",
   private: "Private / invite only",
 };
 
+// Map DB row types
+export type DBShareProfile = {
+  id: string;
+  profile_id: string;
+  name: string;
+  description: string;
+  allowed_fields: ShareFieldKey[];
+  expires_at: string | null;
+  is_active: boolean;
+};
+
+export type DBQRCode = {
+  id: string;
+  profile_id: string;
+  share_profile_id: string;
+  label: string;
+  token: string;
+  scan_count: number;
+  status: string;
+  created_at: string;
+};
+
 function SharePage() {
   const { create: shouldCreate } = Route.useSearch();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<DBShareProfile[]>([]);
+  const [links, setLinks] = useState<DBQRCode[]>([]);
+  const [editing, setEditing] = useState<DBShareProfile | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [profiles, setProfiles] = useState<ShareProfile[]>(() => {
-    const saved = localStorage.getItem("medi-link-share-profiles");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [editing, setEditing] = useState<ShareProfile | null>(null);
+  // Use dynamic base URL
+  const BASE_URL = typeof window !== 'undefined' ? `${window.location.origin}/s/` : 'https://medilink.ai/s/';
+
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return;
+      const { data: pData } = await supabase.from("profiles").select("id").eq("auth_user_id", user.id).single();
+      if (pData) {
+        setProfileId(pData.id);
+        const [profRes, linkRes] = await Promise.all([
+          supabase.from("share_profiles").select("*").eq("profile_id", pData.id).order('name'),
+          supabase.from("qr_codes").select("*").eq("profile_id", pData.id).order('created_at', { ascending: false })
+        ]);
+        if (profRes.data) setProfiles(profRes.data);
+        if (linkRes.data) setLinks(linkRes.data);
+      }
+    }
+    loadData();
+  }, [user]);
 
   const toggleField = (key: ShareFieldKey) => {
     if (!editing) return;
     setEditing({
       ...editing,
-      fields: editing.fields.includes(key) ? editing.fields.filter((f) => f !== key) : [...editing.fields, key],
+      allowed_fields: editing.allowed_fields.includes(key) 
+        ? editing.allowed_fields.filter((f) => f !== key) 
+        : [...editing.allowed_fields, key],
     });
   };
 
   const createProfile = () => {
+    if (!profileId) {
+      toast.error("Profile not loaded yet.");
+      return;
+    }
     setEditing({
-      id: `sp_${Date.now()}`,
+      id: crypto.randomUUID(),
+      profile_id: profileId,
       name: "New share profile",
-      preset: "Custom",
       description: "Custom selection of health fields.",
-      fields: ["name", "bloodGroup", "allergies"],
-      createdAt: new Date().toISOString(),
-      expiresAt: null,
-      visibility: "pin-protected",
-      status: "active",
-      views: 0,
-      token: Math.random().toString(36).slice(2, 10),
+      allowed_fields: ["name", "bloodGroup", "allergies"] as ShareFieldKey[],
+      expires_at: null,
+      is_active: true,
     });
   };
 
   useEffect(() => {
-    if (shouldCreate) {
+    if (shouldCreate && profileId) {
       createProfile();
-      navigate({ search: { create: undefined } as any });
+      navigate({ search: { create: undefined } as any, replace: true });
     }
-  }, [shouldCreate]);
+  }, [shouldCreate, profileId]);
 
-  const saveEditing = () => {
-    if (!editing) return;
-
-    const exists = profiles.some((p) => p.id === editing.id);
-    const nextProfiles: ShareProfile[] = exists 
-      ? profiles.map((p) => (p.id === editing.id ? editing : p)) 
-      : [editing, ...profiles];
-      
-    localStorage.setItem("medi-link-share-profiles", JSON.stringify(nextProfiles));
+  const saveEditing = async () => {
+    if (!editing || !profileId) return;
+    setIsSaving(true);
     
-    if (!exists) {
-      const savedQrCodes = localStorage.getItem("medi-link-qr-codes");
-      const currentQrCodes: QRCodeItem[] = savedQrCodes ? JSON.parse(savedQrCodes) : [];
-      const newQrCode: QRCodeItem = {
-        id: `qr_${Date.now()}`,
-        shareProfileId: editing.id,
-        label: `${editing.name} QR`,
-        createdAt: new Date().toISOString(),
-        scans: 0,
-        status: "active",
-      };
-      const nextQrCodes = [newQrCode, ...currentQrCodes];
-      localStorage.setItem("medi-link-qr-codes", JSON.stringify(nextQrCodes));
-    } else {
-      const oldProfile = profiles.find((p) => p.id === editing.id);
-      if (oldProfile && oldProfile.name !== editing.name) {
-        const savedQrCodes = localStorage.getItem("medi-link-qr-codes");
-        const currentQrCodes: QRCodeItem[] = savedQrCodes ? JSON.parse(savedQrCodes) : [];
-        const nextQrCodes = currentQrCodes.map((qr) => {
-          if (qr.shareProfileId === editing.id && qr.label === `${oldProfile.name} QR`) {
-            return { ...qr, label: `${editing.name} QR` };
-          }
-          return qr;
-        });
-        localStorage.setItem("medi-link-qr-codes", JSON.stringify(nextQrCodes));
-      }
-    }
-    
-    setProfiles(nextProfiles);
-    setEditing(null);
-    toast.success("Share profile saved");
-  };
-
-  const remove = (id: string) => {
-    const nextProfiles = profiles.filter((p) => p.id !== id);
-    localStorage.setItem("medi-link-share-profiles", JSON.stringify(nextProfiles));
-
-    // Also remove the corresponding QR code
-    const savedQrCodes = localStorage.getItem("medi-link-qr-codes");
-    const currentQrCodes: QRCodeItem[] = savedQrCodes ? JSON.parse(savedQrCodes) : [];
-    const nextQrCodes = currentQrCodes.filter((c) => c.shareProfileId !== id);
-    localStorage.setItem("medi-link-qr-codes", JSON.stringify(nextQrCodes));
-
-    setProfiles(nextProfiles);
-    toast.success("Share profile deleted");
-  };
-
-  const regenerate = (id: string) => {
-    const next: ShareProfile[] = profiles.map((p) => (p.id === id ? { ...p, token: Math.random().toString(36).slice(2, 10), status: "active" } : p));
-    localStorage.setItem("medi-link-share-profiles", JSON.stringify(next));
-    setProfiles(next);
-    toast.success("Link regenerated — the previous URL no longer works");
-  };
-
-  const copyLink = async (profile: ShareProfile) => {
     try {
-      await navigator.clipboard.writeText(`${BASE_URL}${profile.token}`);
+      const exists = profiles.some((p) => p.id === editing.id);
+      
+      if (exists) {
+        // Update
+        const { error } = await supabase.from("share_profiles").update({
+          name: editing.name,
+          description: editing.description,
+          allowed_fields: editing.allowed_fields,
+          is_active: editing.is_active
+        }).eq("id", editing.id);
+        
+        if (error) throw error;
+        
+        setProfiles(profiles.map((p) => (p.id === editing.id ? editing : p)));
+        toast.success("Share profile updated");
+      } else {
+        // Insert new share profile
+        const { error: spError } = await supabase.from("share_profiles").insert(editing);
+        if (spError) throw spError;
+        
+        // Automatically generate a primary QR code / link for the new profile
+        const newToken = Math.random().toString(36).slice(2, 10);
+        const newLink: DBQRCode = {
+          id: crypto.randomUUID(),
+          profile_id: profileId,
+          share_profile_id: editing.id,
+          label: `${editing.name} Link`,
+          token: newToken,
+          scan_count: 0,
+          status: 'active',
+          created_at: new Date().toISOString()
+        };
+        
+        const { error: qrError } = await supabase.from("qr_codes").insert(newLink);
+        if (qrError) throw qrError;
+
+        setProfiles([...profiles, editing].sort((a, b) => a.name.localeCompare(b.name)));
+        setLinks([newLink, ...links]);
+        toast.success("Share profile created");
+      }
+      setEditing(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const removeProfile = async (id: string) => {
+    try {
+      const { error } = await supabase.from("share_profiles").delete().eq("id", id);
+      if (error) throw error;
+      setProfiles(profiles.filter((p) => p.id !== id));
+      setLinks(links.filter((l) => l.share_profile_id !== id));
+      toast.success("Share profile deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete profile");
+    }
+  };
+
+  const removeLink = async (id: string) => {
+    try {
+      const { error } = await supabase.from("qr_codes").delete().eq("id", id);
+      if (error) throw error;
+      setLinks(links.filter((l) => l.id !== id));
+      toast.success("Link deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete link");
+    }
+  };
+
+  const regenerateLink = async (link: DBQRCode) => {
+    try {
+      const newToken = Math.random().toString(36).slice(2, 10);
+      const { error } = await supabase.from("qr_codes").update({ token: newToken }).eq("id", link.id);
+      if (error) throw error;
+      
+      setLinks(links.map(l => l.id === link.id ? { ...l, token: newToken } : l));
+      toast.success("Link regenerated — the previous URL no longer works");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to regenerate link");
+    }
+  };
+
+  const copyLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(`${BASE_URL}${token}`);
       toast.success("Share link copied");
     } catch {
       toast.error("Couldn't access the clipboard");
@@ -213,24 +283,24 @@ function SharePage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate font-display text-base font-semibold text-foreground">{profile.name}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{profile.preset} preset</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Custom preset</p>
                       </div>
-                      <StatusBadge tone={profile.status === "active" ? "success" : profile.status === "expired" ? "danger" : "neutral"}>
-                        {profile.status}
+                      <StatusBadge tone={profile.is_active ? "success" : "neutral"}>
+                        {profile.is_active ? "active" : "inactive"}
                       </StatusBadge>
                     </div>
 
                     <p className="mt-3 text-sm text-muted-foreground">{profile.description}</p>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {profile.fields.slice(0, 4).map((key) => (
+                      {profile.allowed_fields.slice(0, 4).map((key) => (
                         <span key={key} className="rounded-full bg-accent px-3 py-0.5 text-[11px] font-medium text-accent-foreground">
                           {shareFields.find((f) => f.key === key)?.label}
                         </span>
                       ))}
-                      {profile.fields.length > 4 ? (
+                      {profile.allowed_fields.length > 4 ? (
                         <span className="rounded-full bg-muted px-3 py-0.5 text-[11px] font-medium text-muted-foreground">
-                          +{profile.fields.length - 4} more
+                          +{profile.allowed_fields.length - 4} more
                         </span>
                       ) : null}
                     </div>
@@ -238,28 +308,20 @@ function SharePage() {
                     <Separator className="my-4" />
 
                     <dl className="space-y-2 text-xs text-muted-foreground">
-                      <div className="flex justify-between"><dt>Visibility</dt><dd className="font-medium text-foreground">{visibilityLabel[profile.visibility]}</dd></div>
-                      <div className="flex justify-between"><dt>Created</dt><dd>{formatDate(profile.createdAt)}</dd></div>
-                      <div className="flex justify-between"><dt>Expires</dt><dd>{formatDate(profile.expiresAt)}</dd></div>
-                      <div className="flex justify-between"><dt>Views</dt><dd>{profile.views}</dd></div>
+                      <div className="flex justify-between"><dt>Visibility</dt><dd className="font-medium text-foreground">Anyone with link</dd></div>
+                      <div className="flex justify-between"><dt>Expires</dt><dd>{profile.expires_at ? formatDate(profile.expires_at) : 'Never'}</dd></div>
                     </dl>
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setEditing(profile)}>
                         <Sliders className="size-3.5" aria-hidden /> Fields
                       </Button>
-                      <Button variant="ghost" size="icon" className="rounded-lg" aria-label={`Copy link for ${profile.name}`} onClick={() => copyLink(profile)}>
-                        <Copy className="size-4" aria-hidden />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="rounded-lg" aria-label={`Regenerate link for ${profile.name}`} onClick={() => regenerate(profile.id)}>
-                        <RefreshCw className="size-4" aria-hidden />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="rounded-lg text-destructive hover:text-destructive"
                         aria-label={`Delete ${profile.name}`}
-                        onClick={() => remove(profile.id)}
+                        onClick={() => removeProfile(profile.id)}
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </Button>
@@ -273,57 +335,60 @@ function SharePage() {
 
         <TabsContent value="links" className="mt-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            {profiles.map((profile, i) => (
-              <Widget key={profile.id} delay={i * 0.04}>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-display text-base font-semibold text-foreground">{profile.name}</p>
-                    <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Link2 className="size-3.5 shrink-0" aria-hidden />
-                      <span className="truncate">{BASE_URL}{profile.token}</span>
-                    </p>
-                  </div>
-                  <StatusBadge tone={profile.status === "active" ? "success" : "danger"}>{profile.status}</StatusBadge>
-                </div>
-
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-                  {[
-                    { label: "Created", value: formatDate(profile.createdAt) },
-                    { label: "Expiry", value: formatDate(profile.expiresAt) },
-                    { label: "Visibility", value: visibilityLabel[profile.visibility] },
-                    { label: "Views", value: String(profile.views) },
-                  ].map((cell) => (
-                    <div key={cell.label} className="rounded-xl border border-border bg-surface p-3">
-                      <dt className="text-[11px] text-muted-foreground">{cell.label}</dt>
-                      <dd className="mt-0.5 truncate text-xs font-medium text-foreground">{cell.value}</dd>
+            {links.map((link, i) => {
+              const relatedProfile = profiles.find(p => p.id === link.share_profile_id);
+              
+              return (
+                <Widget key={link.id} delay={i * 0.04}>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-display text-base font-semibold text-foreground">{link.label}</p>
+                      <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Link2 className="size-3.5 shrink-0" aria-hidden />
+                        <span className="truncate">{BASE_URL}{link.token}</span>
+                      </p>
+                      {relatedProfile && (
+                        <p className="mt-1 text-xs text-muted-foreground">Linked to profile: <strong>{relatedProfile.name}</strong></p>
+                      )}
                     </div>
-                  ))}
-                </dl>
+                    <StatusBadge tone={link.status === "active" ? "success" : "danger"}>{link.status}</StatusBadge>
+                  </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="rounded-lg" onClick={() => copyLink(profile)}>
-                    <Copy className="size-3.5" aria-hidden /> Copy
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-lg" onClick={() => toast.info("Opening the recipient view in the connected build")}>
-                    <Eye className="size-3.5" aria-hidden /> Open
-                  </Button>
-                  <Button variant="ghost" size="sm" className="rounded-lg" onClick={() => setEditing(profile)}>
-                    <Pencil className="size-3.5" aria-hidden /> Edit
-                  </Button>
-                  <Button variant="ghost" size="sm" className="rounded-lg" onClick={() => regenerate(profile.id)}>
-                    <RefreshCw className="size-3.5" aria-hidden /> Regenerate
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-lg text-destructive hover:text-destructive"
-                    onClick={() => remove(profile.id)}
-                  >
-                    <Trash2 className="size-3.5" aria-hidden /> Delete
-                  </Button>
-                </div>
-              </Widget>
-            ))}
+                  <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                    {[
+                      { label: "Created", value: formatDate(link.created_at) },
+                      { label: "Visibility", value: "Anyone with link" },
+                      { label: "Scans/Views", value: String(link.scan_count) },
+                    ].map((cell) => (
+                      <div key={cell.label} className="rounded-xl border border-border bg-surface p-3">
+                        <dt className="text-[11px] text-muted-foreground">{cell.label}</dt>
+                        <dd className="mt-0.5 truncate text-xs font-medium text-foreground">{cell.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" className="rounded-lg" onClick={() => copyLink(link.token)}>
+                      <Copy className="size-3.5" aria-hidden /> Copy
+                    </Button>
+                    <Button variant="outline" size="sm" className="rounded-lg" onClick={() => window.open(`${BASE_URL}${link.token}`, '_blank')}>
+                      <Eye className="size-3.5" aria-hidden /> Open
+                    </Button>
+                    <Button variant="ghost" size="sm" className="rounded-lg" onClick={() => regenerateLink(link)}>
+                      <RefreshCw className="size-3.5" aria-hidden /> Regenerate
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg text-destructive hover:text-destructive"
+                      onClick={() => removeLink(link.id)}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden /> Delete
+                    </Button>
+                  </div>
+                </Widget>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
@@ -347,10 +412,19 @@ function SharePage() {
                   className="rounded-xl"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-desc">Description</Label>
+                <Input
+                  id="profile-desc"
+                  value={editing.description || ""}
+                  onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
 
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">
-                  Shared fields <span className="text-muted-foreground">({editing.fields.length}/{shareFields.length})</span>
+                  Shared fields <span className="text-muted-foreground">({editing.allowed_fields.length}/{shareFields.length})</span>
                 </p>
                 <ul className="divide-y divide-border rounded-xl border border-border">
                   {shareFields.map((field) => (
@@ -363,7 +437,7 @@ function SharePage() {
                       </div>
                       <Switch
                         id={`f-${field.key}`}
-                        checked={editing.fields.includes(field.key)}
+                        checked={editing.allowed_fields.includes(field.key)}
                         onCheckedChange={() => toggleField(field.key)}
                       />
                     </li>
@@ -374,11 +448,11 @@ function SharePage() {
           ) : null}
 
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setEditing(null)}>
+            <Button variant="outline" className="rounded-xl" onClick={() => setEditing(null)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button className="rounded-xl" onClick={saveEditing}>
-              Save profile
+            <Button className="rounded-xl" onClick={saveEditing} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save profile"}
             </Button>
           </DialogFooter>
         </DialogContent>

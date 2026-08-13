@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardAiRouteImport } from './routes/dashboard.ai'
 import { Route as DashboardDocumentsRouteImport } from './routes/dashboard.documents'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 import { Route as DashboardOnboardingRouteImport } from './routes/dashboard.onboarding'
@@ -24,6 +25,7 @@ import { Route as DashboardQrRouteImport } from './routes/dashboard.qr'
 import { Route as DashboardScannerRouteImport } from './routes/dashboard.scanner'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardShareRouteImport } from './routes/dashboard.share'
+import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as DashboardOnboardingIndexRouteImport } from './routes/dashboard.onboarding.index'
 import { Route as DashboardOnboardingFillRouteImport } from './routes/dashboard.onboarding.fill'
 import { Route as DashboardSoonSlugRouteImport } from './routes/dashboard.soon.$slug'
@@ -61,6 +63,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAiRoute = DashboardAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardDocumentsRoute = DashboardDocumentsRouteImport.update({
@@ -103,6 +110,11 @@ const DashboardShareRoute = DashboardShareRouteImport.update({
   path: '/share',
   getParentRoute: () => DashboardRoute,
 } as any)
+const STokenRoute = STokenRouteImport.update({
+  id: '/s/$token',
+  path: '/s/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardOnboardingIndexRoute =
   DashboardOnboardingIndexRouteImport.update({
     id: '/',
@@ -127,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/documents': typeof DashboardDocumentsRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/onboarding': typeof DashboardOnboardingRouteWithChildren
@@ -135,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/scanner': typeof DashboardScannerRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/share': typeof DashboardShareRoute
+  '/s/$token': typeof STokenRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/onboarding/fill': typeof DashboardOnboardingFillRoute
   '/dashboard/soon/$slug': typeof DashboardSoonSlugRoute
@@ -146,6 +160,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/documents': typeof DashboardDocumentsRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
@@ -153,6 +168,7 @@ export interface FileRoutesByTo {
   '/dashboard/scanner': typeof DashboardScannerRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/share': typeof DashboardShareRoute
+  '/s/$token': typeof STokenRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/onboarding/fill': typeof DashboardOnboardingFillRoute
   '/dashboard/soon/$slug': typeof DashboardSoonSlugRoute
@@ -166,6 +182,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/dashboard/ai': typeof DashboardAiRoute
   '/dashboard/documents': typeof DashboardDocumentsRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/onboarding': typeof DashboardOnboardingRouteWithChildren
@@ -174,6 +191,7 @@ export interface FileRoutesById {
   '/dashboard/scanner': typeof DashboardScannerRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/share': typeof DashboardShareRoute
+  '/s/$token': typeof STokenRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/onboarding/fill': typeof DashboardOnboardingFillRoute
   '/dashboard/soon/$slug': typeof DashboardSoonSlugRoute
@@ -188,6 +206,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/sitemap.xml'
+    | '/dashboard/ai'
     | '/dashboard/documents'
     | '/dashboard/notifications'
     | '/dashboard/onboarding'
@@ -196,6 +215,7 @@ export interface FileRouteTypes {
     | '/dashboard/scanner'
     | '/dashboard/settings'
     | '/dashboard/share'
+    | '/s/$token'
     | '/dashboard/'
     | '/dashboard/onboarding/fill'
     | '/dashboard/soon/$slug'
@@ -207,6 +227,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/sitemap.xml'
+    | '/dashboard/ai'
     | '/dashboard/documents'
     | '/dashboard/notifications'
     | '/dashboard/profile'
@@ -214,6 +235,7 @@ export interface FileRouteTypes {
     | '/dashboard/scanner'
     | '/dashboard/settings'
     | '/dashboard/share'
+    | '/s/$token'
     | '/dashboard'
     | '/dashboard/onboarding/fill'
     | '/dashboard/soon/$slug'
@@ -226,6 +248,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/sitemap.xml'
+    | '/dashboard/ai'
     | '/dashboard/documents'
     | '/dashboard/notifications'
     | '/dashboard/onboarding'
@@ -234,6 +257,7 @@ export interface FileRouteTypes {
     | '/dashboard/scanner'
     | '/dashboard/settings'
     | '/dashboard/share'
+    | '/s/$token'
     | '/dashboard/'
     | '/dashboard/onboarding/fill'
     | '/dashboard/soon/$slug'
@@ -247,6 +271,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  STokenRoute: typeof STokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -298,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/ai': {
+      id: '/dashboard/ai'
+      path: '/ai'
+      fullPath: '/dashboard/ai'
+      preLoaderRoute: typeof DashboardAiRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/documents': {
@@ -356,6 +388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardShareRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/s/$token': {
+      id: '/s/$token'
+      path: '/s/$token'
+      fullPath: '/s/$token'
+      preLoaderRoute: typeof STokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/onboarding/': {
       id: '/dashboard/onboarding/'
       path: '/'
@@ -394,6 +433,7 @@ const DashboardOnboardingRouteWithChildren =
   DashboardOnboardingRoute._addFileChildren(DashboardOnboardingRouteChildren)
 
 interface DashboardRouteChildren {
+  DashboardAiRoute: typeof DashboardAiRoute
   DashboardDocumentsRoute: typeof DashboardDocumentsRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
   DashboardOnboardingRoute: typeof DashboardOnboardingRouteWithChildren
@@ -407,6 +447,7 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAiRoute: DashboardAiRoute,
   DashboardDocumentsRoute: DashboardDocumentsRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
   DashboardOnboardingRoute: DashboardOnboardingRouteWithChildren,
@@ -430,6 +471,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  STokenRoute: STokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
