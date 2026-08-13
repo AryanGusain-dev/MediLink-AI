@@ -1176,13 +1176,23 @@ function AIPage() {
                               )}
                             </div>
                             {/* Doctor & Clinic Details */}
-                            <div className="pt-1.5 border-t border-border/50 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                              <span className="font-semibold text-foreground flex items-center gap-1">
-                                <Stethoscope className="size-3 text-primary shrink-0" />
-                                {doc.doctor}
-                              </span>
-                              <span className="text-muted-foreground font-medium">{doc.clinic}</span>
-                            </div>
+                            {doc ? (
+                              <div className="pt-1.5 border-t border-border/50 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                                <span className="font-semibold text-foreground flex items-center gap-1">
+                                  <Stethoscope className="size-3 text-primary shrink-0" />
+                                  {doc.doctor}
+                                </span>
+                                <span className="text-muted-foreground font-medium">{doc.clinic}</span>
+                              </div>
+                            ) : (
+                              <div className="pt-1.5 border-t border-border/50 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                                <span className="font-medium text-muted-foreground flex items-center gap-1">
+                                  <FileText className="size-3 text-primary shrink-0" />
+                                  Extracted Document Metric
+                                </span>
+                                <span className="text-muted-foreground font-medium">Medical Record Data</span>
+                              </div>
+                            )}
                           </div>
                         </li>
                       );
