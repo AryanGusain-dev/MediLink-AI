@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Loader2, Lock, Mail, Zap } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { AuthLayout } from "@/components/layout/auth-layout";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -51,7 +52,12 @@ function LoginPage() {
   const handleTrialLogin = async () => {
     setLoading(true);
     const trialEmail = import.meta.env.VITE_TRIAL_USER_EMAIL || "rocksposiden@gmail.com";
-    const trialPassword = import.meta.env.VITE_TRIAL_USER_PASSWORD || "patient#1";
+    let trialPassword = import.meta.env.VITE_TRIAL_USER_PASSWORD || "patient#1";
+
+    // Guarantee '#' is not truncated by dotenv comment parsing
+    if (!trialPassword || trialPassword === "patient" || !trialPassword.includes("#")) {
+      trialPassword = "patient#1";
+    }
 
     setEmail(trialEmail);
     setPassword(trialPassword);
@@ -104,17 +110,25 @@ function LoginPage() {
 
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <div className="relative flex items-center">
+            <Lock className="pointer-events-none absolute left-3 size-4 text-muted-foreground" aria-hidden />
             <Input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="h-10 rounded-xl pl-10"
+              className="h-10 rounded-xl pl-10 pr-10"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 p-1 text-muted-foreground hover:text-foreground focus:outline-none transition-colors rounded-md"
+              title={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
           </div>
         </div>
 
