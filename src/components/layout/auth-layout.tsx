@@ -22,7 +22,7 @@ export function AuthLayout({
   footer: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen w-full items-stretch lg:grid-cols-2 bg-background">
+    <div className="grid min-h-screen min-h-dvh w-full items-stretch lg:grid-cols-2 bg-background">
       <div className="flex flex-col justify-center px-4 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-md">
           <Link to="/" className="inline-flex">
@@ -43,7 +43,7 @@ export function AuthLayout({
         </div>
       </div>
 
-      <aside className="gradient-brand relative hidden flex-col justify-between p-12 lg:flex h-full min-h-screen">
+      <aside className="gradient-brand relative hidden flex-col justify-between p-12 lg:flex h-full min-h-screen min-h-dvh">
         <div className="surface-grid absolute inset-0 opacity-20" aria-hidden />
         <div className="relative">
           <span className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/15 px-3 py-2 text-xs font-semibold text-primary-foreground">
