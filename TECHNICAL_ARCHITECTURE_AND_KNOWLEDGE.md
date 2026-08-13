@@ -1,6 +1,6 @@
 # MediLink AI — Technical Architecture, ML/XAI Specifications & Domain Knowledge
 
-This document provides a comprehensive technical breakdown of the MediLink AI platform, including recent platform additions, Machine Learning & Explainable AI (XAI) modules, core algorithms, database schemas, system architecture, and essential medical domain knowledge.
+This document provides a comprehensive technical breakdown of the MediLink AI platform, including recent platform additions, Machine Learning & Explainable AI (XAI) modules, core algorithms, database schemas, system architecture, training methodology, evaluation metrics, and essential medical domain knowledge.
 
 ---
 
@@ -32,9 +32,9 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 | Module Name | Model Architecture / Methodology | Input & Dimensionality | Output & Accuracy / Metrics |
 | :--- | :--- | :--- | :--- |
 | **Multi-Modal DDI Predictor** | 3 Parallel Autoencoders + Deep Neural Network (DNN) Classifier | **9,582 features** per drug pair ($3,194 \text{ Structural} + 3,194 \text{ Target} + 3,194 \text{ Gene Ontology}$) | Multi-label binary classification across **1,308 interaction types**.<br>**Accuracy: 96.49%** \| **Micro Recall: 96.96%** \| **Micro Precision: 96.67%** |
-| **Structural Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 SMILES Chemical Fingerprint similarity scores | Compressed structural latent representation vector |
-| **Target Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 Protein/Receptor target interaction similarity scores | Compressed target binding latent vector |
-| **GO Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 Gene Ontology cellular pathway similarity scores | Compressed biological pathway latent vector |
+| **Structural Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 SMILES Chemical Fingerprint similarity scores | Compressed structural latent representation vector ($200$ dimensions) |
+| **Target Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 Protein/Receptor target interaction similarity scores | Compressed target binding latent vector ($200$ dimensions) |
+| **GO Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 Gene Ontology cellular pathway similarity scores | Compressed biological pathway latent vector ($200$ dimensions) |
 | **Offline Kernel SHAP Module** | Kernel SHAP (Shapley Additive Explanations) (`predict_ddi_xai/`) | Sampled background pairs (`shap_train_final.npz`) & test pairs | Global feature importance beeswarm plots & 48 pre-rendered waterfall PDF charts (`48_waterfall_plots.pdf`) |
 | **Real-time Textual XAI Engine** | Input $\times$ Gradient Saliency Backpropagation (`app/services/xai_service.py`) | Real-time pair similarity vectors ($SS, TS, GS$) | Text explanation attributing impact % across Target Binding, GO Pathways, and Structural Similarity |
 
@@ -44,13 +44,13 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 
 | Algorithm / Technique | Category | Mathematical / Algorithmic Principle | Application in MediLink AI |
 | :--- | :--- | :--- | :--- |
-| **Multi-Modal Dimensionality Reduction** | Unsupervised DL | $\mathcal{L}_{AE} = \| X - \text{Decoder}(\text{Encoder}(X)) \|^2_2$ | Compresses 9,582 bio-similarity features into low-dimensional representations. |
-| **Sigmoid Multi-Label Binary Cross-Entropy** | Optimization Loss | $\mathcal{L}_{BCE} = -\frac{1}{N}\sum [y \log \hat{y} + (1-y) \log(1-\hat{y})]$ | Trains the DNN predictor across 1,308 non-exclusive interaction labels. |
-| **Gradient-Based Saliency Attribution** | Explainable AI | $S_m = \left| \frac{\partial \text{Logit}_{\max}}{\partial X_m} \right| \times \text{mean}(|X_m|)$ | Calculates modality contribution percentages ($SS\%, TS\%, GS\%$) on low-end hardware. |
+| **Multi-Modal Autoencoding** | Unsupervised DL | $\mathcal{L}_{AE} = \| X - \text{Decoder}(\text{Encoder}(X)) \|^2_2 \text{ (MSE Loss)}$ | Compresses 9,582 bio-similarity features down to 600 latent bottleneck features without losing critical data. |
+| **Sigmoid Multi-Label BCE Loss** | Optimization Loss | $\mathcal{L}_{BCE} = -\frac{1}{N}\sum [y \log \hat{y} + (1-y) \log(1-\hat{y})]$ | Trains the 7-layer DNN predictor across 1,308 non-exclusive interaction labels. |
+| **Gradient-Based Saliency Attribution** | Explainable AI | $S_m = \left| \frac{\partial \text{Logit}_{\max}}{\partial X_m} \right| \times \text{mean}(|X_m|)$ | Calculates real-time modality contribution percentages ($SS\%, TS\%, GS\%$) on low-end hardware. |
 | **Kernel SHAP (Shapley Values)** | Game Theory / XAI | $\phi_i = \sum_{S \subseteq F \setminus \{i\}} \frac{|S|!(|F|-|S|-1)!}{|F|!} [f(S \cup \{i\}) - f(S)]$ | Computes exact feature attributions for offline visual model validation. |
 | **Cosine & Jaccard Bio-Similarity** | Distance Metric | $Sim(D_A, D_B) = \frac{\mathbf{v}_A \cdot \mathbf{v}_B}{\|\mathbf{v}_A\| \|\mathbf{v}_B\|}$ | Constructs the 544 $\times$ 544 pairwise structural, target, and GO matrices. |
-| **Regex & Canonical String Normalization** | Text Processing | `re.sub(r'[^a-z0-9]', '', drug_name.lower())` | Normalizes brand names (e.g., *Pan 40*, *Ibuprofen 400mg*) to DrugBank canonical keys. |
-| **Structured LLM Extraction Prompting** | NLP / LLM Reasoning | Few-shot schema-enforced JSON extraction via Gemini 2.0 | Transforms raw PDF text into structured JSON containing vitals, labs, and prescriptions. |
+| **Regex String Normalization** | Text Processing | `re.sub(r'[^a-z0-9]', '', drug_name.lower())` | Normalizes brand names (e.g., *Pan 40*, *Ibuprofen 400mg*) to DrugBank canonical keys. |
+| **Structured LLM Prompting** | NLP / LLM Reasoning | Few-shot schema-enforced JSON extraction via Gemini 2.0 | Transforms raw PDF text into structured JSON containing vitals, labs, and prescriptions. |
 
 ---
 
@@ -96,7 +96,77 @@ graph TD
 
 ---
 
-## 5. 🏥 Essential Medical Domain Knowledge for Presentations
+## 5. 🔬 Model Training Workflow, Hyperparameters & Evaluation Methodology
+
+### A. Training Architecture & Step-by-Step Pipeline
+
+```mermaid
+flowchart TD
+    Sub1["Modality 1: Structural (3,194)"] --> Encoder1["Encoder 1 (3,194 -> 1,000 -> 200)"]
+    Sub2["Modality 2: Target (3,194)"] --> Encoder2["Encoder 2 (3,194 -> 1,000 -> 200)"]
+    Sub3["Modality 3: GO Pathway (3,194)"] --> Encoder3["Encoder 3 (3,194 -> 1,000 -> 200)"]
+    
+    Encoder1 --> Concat["Concatenate Latent Representations (600 Vector)"]
+    Encoder2 --> Concat
+    Encoder3 --> Concat
+
+    Concat --> DNN["7-Layer Deep Neural Network (2,000 Neurons per Layer)"]
+    DNN --> Loss["BCEWithLogitsLoss (Multi-Label Prediction) + MSELoss (Reconstruction)"]
+```
+
+1. **Multi-Modal Feature Extraction**: Constructs a 9,582-dimensional vector for each drug pair combining chemical fingerprints, protein binding, and biological process ontology.
+2. **Dimension Reduction (Autoencoding)**: 3 parallel encoder modules compress each 3,194-dimensional input down to a **200-dimensional bottleneck latent code**.
+3. **Latent Vector Fusion**: The three 200-dimensional codes are concatenated into a **600-dimensional unified vector**.
+4. **Deep Network Classification**: The 600-dimensional fused vector is passed through a **7-layer Deep Neural Network (DNN)** with 2,000 hidden units per layer, equipped with Batch Normalization, Dropout ($p=0.3$), and ReLU activations.
+5. **Joint Loss Optimization**:
+   * **MSE Loss** optimizes input reconstruction in the Autoencoders using `RMSprop` ($\text{lr}=0.001$).
+   * **BCEWithLogits Loss** optimizes multi-label interaction prediction in the DNN using `Adam` ($\text{lr}=0.0001$).
+6. **Validation & Early Stopping**: Trained using 5-fold cross-validation repeated 5 times ($5 \times 5 = 25$ runs total) with an early stopping patience of 15 epochs.
+
+---
+
+### B. Training Hyperparameters
+
+| Hyperparameter | Value | Description |
+| :--- | :--- | :--- |
+| `input_size` | `3194` | Feature dimension per biological modality ($SS, TS, GS$). |
+| `code_size` | `200` | Latent bottleneck dimension per Autoencoder. |
+| `output_size` | `106` / `1308` | Number of multi-label target interaction classes. |
+| `AE_lr` | `0.001` | Learning rate for Autoencoder (RMSprop optimizer). |
+| `DNN_lr` | `0.0001` | Learning rate for DNN classifier (Adam optimizer). |
+| `drop_rate` | `0.3` | Dropout probability for regularization in encoder & DNN layers. |
+| `threshold` | `0.5` | Probability threshold for binary decision classification. |
+| `epoch` | `850` | Maximum training epochs per fold. |
+| `n_splits` & `n_repeats` | `5` & `5` | 5-Fold Cross Validation repeated 5 times. |
+| `patience` | `15` | Early stopping epoch patience. |
+
+---
+
+### C. Evaluation Methodology & Metric Selection
+
+#### Why Classification Metrics Are Used Instead of Regression Metrics (MSE/RMSE)
+
+* **Classification vs. Regression**: Regression metrics like **MSE (Mean Squared Error)** or **RMSE** are used for predicting continuous numeric values (e.g., estimating patient blood pressure in mmHg or predicting house prices). 
+* **Multi-Label Risk Classification**: Drug interaction prediction asks discrete binary safety questions for each interaction class (e.g., *"Does Drug A + Drug B cause Hypertensive Blunting? Yes [1] or No [0]?"*).
+* **Metric Application**:
+  * **Classification Metrics (Accuracy, Precision, Recall)** evaluate final drug interaction safety predictions.
+  * **MSE Loss** is used internally inside the **Autoencoders** to evaluate input reconstruction accuracy during training.
+
+#### Benchmark Metrics on 37,652 Unseen Test Drug Pairs
+
+$$\text{Sigmoid}(\text{Logit}) > 0.5 \implies \text{Positive Interaction Flagged}$$
+
+| Metric | Score | Clinical & Scientific Meaning |
+| :--- | :--- | :--- |
+| **Exact Subset Accuracy** | **96.49%** | Overall exact match percentage across all interaction labels for test pairs. |
+| **Micro Recall** | **96.96%** | **Catches Dangerous Risks:** Measures total global True Positives over actual real-world interactions ($\frac{\sum TP}{\sum TP + \sum FN}$). |
+| **Micro Precision** | **96.67%** | **Prevents False Alarms:** Measures global True Positives over total flagged interactions ($\frac{\sum TP}{\sum TP + \sum FP}$). |
+| **Macro Recall** | **94.72%** | Unweighted average recall across all individual interaction types, ensuring high accuracy on **rare interaction types**. |
+| **Macro Precision** | **94.71%** | Unweighted average precision across all individual interaction types. |
+
+---
+
+## 6. 🏥 Essential Medical Domain Knowledge for Presentations
 
 When building or presenting **MediLink AI**, the following medical concepts and clinical interactions are fundamental:
 
