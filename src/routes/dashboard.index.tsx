@@ -116,22 +116,24 @@ function OverviewColumn({
   chipRows?: number[];
 }) {
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-border p-5 shadow-soft">
-      <div className="flex items-center gap-2">
-        <Icon className="size-4 text-primary" aria-hidden />
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    <div className="flex h-full flex-col rounded-2xl border border-border/80 bg-surface p-5 sm:p-6 shadow-xs hover:border-primary/30 transition-all">
+      <div className="flex items-center gap-2.5">
+        <div className="size-8 rounded-xl bg-primary/10 border border-primary/20 text-primary grid place-items-center">
+          <Icon className="size-4" aria-hidden />
+        </div>
+        <h3 className="text-sm font-bold font-display text-foreground tracking-tight">{title}</h3>
       </div>
-      <dl className="mt-4 divide-y divide-border">
+      <dl className="mt-4 divide-y divide-border/60">
         {rows.map(([label, value], index) => (
-          <div key={label} className="flex items-center justify-between gap-3 py-2.5 text-xs first:pt-0 last:pb-0">
-            <dt className="text-muted-foreground">{label}</dt>
-            <dd className={chipRows?.includes(index) === false ? "font-medium text-foreground" : value === "Enabled" ? "rounded-lg bg-success/12 px-2 py-1 font-semibold text-success" : "rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary"}>
+          <div key={label} className="flex items-center justify-between gap-3 py-3 text-xs first:pt-0 last:pb-0">
+            <dt className="text-muted-foreground font-medium">{label}</dt>
+            <dd className={chipRows?.includes(index) === false ? "font-semibold text-foreground" : value === "Enabled" ? "rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-500/20" : "rounded-full bg-primary/10 px-2.5 py-0.5 font-semibold text-primary border border-primary/20"}>
               {value}
             </dd>
           </div>
         ))}
       </dl>
-      {footer ? <div className="mt-auto pt-4 text-xs font-medium text-primary">{footer}</div> : null}
+      {footer ? <div className="mt-auto pt-4 text-xs font-semibold text-primary">{footer}</div> : null}
     </div>
   );
 }

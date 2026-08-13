@@ -182,3 +182,38 @@ async def get_status(
         processing_error=doc.get("processing_error"),
         uploaded_at=str(doc.get("uploaded_at", "")),
     )
+
+
+@router.get(
+    "/{document_id}/download",
+    summary="Download or stream document file content",
+)
+async def download_document_file(
+    document_id: str,
+    supabase: Client = Depends(get_supabase_client),
+):
+    """
+    Retrieves document metadata from database and streams the file from Supabase Storage.
+    """
+    res = supabase.table("documents").select("*").eq("id", document_id).maybe_single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    doc = res.data
+    storage_path = doc.get("storage_path")
+    file_name = doc.get("file_name") or doc.get("title") or "document.pdf"
+    mime_type = doc.get("mime_type") or "application/pdf"
+
+    if storage_path:
+        try:
+            file_bytes = supabase.storage.from_("documents").download(storage_path)
+            from fastapi.responses import Response
+            return Response(
+                content=file_bytes,
+                media_type=mime_type,
+                headers={"Content-Disposition": f'inline; filename="{file_name}"'},
+            )
+        except Exception as exc:
+            log.warning("storage.download_failed", document_id=document_id, error=str(exc))
+
+    raise HTTPException(status_code=404, detail="File content not available in storage")

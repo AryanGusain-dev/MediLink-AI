@@ -283,20 +283,35 @@ function DocumentsPage() {
   };
 
   // Handle Preview
-  const handlePreview = (doc: AppMedicalDocument) => {
+  const handlePreview = async (doc: AppMedicalDocument) => {
     if (doc.isDummy) {
       toast.info("This is a sample preview card demonstrating how your files will appear.");
       return;
     }
 
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
     if (doc.storagePath) {
-      const { data } = supabase.storage.from("documents").getPublicUrl(doc.storagePath);
-      if (data?.publicUrl) {
-        window.open(data.publicUrl, "_blank");
+      // 1. Try creating a 1-hour signed URL (works for private & public buckets)
+      const { data: signedData } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(doc.storagePath, 3600);
+
+      if (signedData?.signedUrl) {
+        window.open(signedData.signedUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      // 2. Fallback to public URL
+      const { data: pubData } = supabase.storage.from("documents").getPublicUrl(doc.storagePath);
+      if (pubData?.publicUrl) {
+        window.open(pubData.publicUrl, "_blank", "noopener,noreferrer");
         return;
       }
     }
-    toast.info("Previewing document record");
+
+    // 3. Fallback to backend streaming URL
+    window.open(`${apiUrl}/documents/${doc.id}/download`, "_blank", "noopener,noreferrer");
   };
 
   // Handle Download
@@ -306,6 +321,8 @@ function DocumentsPage() {
       return;
     }
 
+    toast.info(`Downloading "${doc.name}"...`);
+
     if (doc.storagePath) {
       const { data, error } = await supabase.storage.from("documents").download(doc.storagePath);
       if (data && !error) {
@@ -313,29 +330,44 @@ function DocumentsPage() {
         const a = document.createElement("a");
         a.href = url;
         a.download = doc.name;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast.success("Download started");
+        toast.success(`Downloaded ${doc.name}`);
         return;
       }
     }
-    toast.success("Download started");
-  };
 
-  // If user has 0 uploaded documents in DB, use the sample dummy card
-  const hasNoRealDocs = !loading && docs.length === 0;
-  const activeDocsList = useMemo(() => {
-    if (hasNoRealDocs) {
-      return [DUMMY_DOC];
+    // Fallback to backend download endpoint
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/documents/${doc.id}/download`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = doc.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success(`Downloaded ${doc.name}`);
+        return;
+      }
+    } catch {
+      // ignore
     }
-    return docs;
-  }, [hasNoRealDocs, docs]);
+
+    toast.error("Could not download file. Please verify file storage.");
+  };
 
   // Apply category filter
   const visible = useMemo(() => {
-    if (filter === "all") return activeDocsList;
-    return activeDocsList.filter((d) => d.category === filter);
-  }, [activeDocsList, filter]);
+    if (filter === "all") return docs;
+    return docs.filter((d) => d.category === filter);
+  }, [docs, filter]);
 
   return (
     <div className="space-y-8">
@@ -404,35 +436,6 @@ function DocumentsPage() {
         </AnimatePresence>
       </div>
 
-      {/* Banner when user has 0 uploaded documents */}
-      {hasNoRealDocs && (
-        <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:p-5"
-        >
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-              <Sparkles className="size-5" aria-hidden />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                Sample Document Preview
-                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  Demo
-                </span>
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                No uploaded records found in your database yet. Below is an example showing how your document cards will look.
-              </p>
-            </div>
-          </div>
-          <Button size="sm" className="rounded-xl shrink-0" onClick={() => inputRef.current?.click()}>
-            <Upload className="size-3.5 mr-1.5" aria-hidden /> Upload your first document
-          </Button>
-        </motion.div>
-      )}
-
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -475,7 +478,7 @@ function DocumentsPage() {
           }
         />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {visible.map((doc, i) => (
               <motion.div
@@ -485,36 +488,31 @@ function DocumentsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.2) }}
+                className="h-full"
               >
-                <Widget delay={0} className={`h-full relative ${doc.isDummy ? "border-dashed border-primary/40 bg-card/60" : ""}`}>
-                  {doc.isDummy && (
-                    <div className="mb-3 flex items-center justify-between rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                      <span className="flex items-center gap-1.5">
-                        <Info className="size-3.5" /> Sample Card Preview
-                      </span>
-                      <span>How cards look</span>
-                    </div>
-                  )}
+                <div className="group relative rounded-2xl border border-border/80 bg-surface p-5 transition-all hover:border-primary/40 hover:shadow-xs flex flex-col justify-between h-full space-y-4">
+                  <div className="space-y-4">
+                    {/* Header Row: Icon + Title & Meta + Status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
+                          {doc.type === "image" ? (
+                            <FileImage className="size-5" aria-hidden />
+                          ) : (
+                            <FileText className="size-5" aria-hidden />
+                          )}
+                        </span>
+                        <div className="min-w-0 space-y-1">
+                          <p className="truncate text-sm font-bold font-display text-foreground leading-snug tracking-tight" title={doc.name}>
+                            {doc.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-medium">
+                            {formatSize(doc.sizeKb)} · {formatDate(doc.uploadedAt)}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="flex items-start gap-3">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground">
-                      {doc.type === "image" ? (
-                        <FileImage className="size-5" aria-hidden />
-                      ) : (
-                        <FileText className="size-5" aria-hidden />
-                      )}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground" title={doc.name}>
-                        {doc.name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {formatSize(doc.sizeKb)} · {doc.isDummy ? "Sample Record" : formatDate(doc.uploadedAt)}
-                      </p>
-                    </div>
-                    {doc.isDummy ? (
-                      <StatusBadge tone="info">Sample</StatusBadge>
-                    ) : (
+                      {/* Status Badge */}
                       <StatusBadge
                         tone={
                           doc.status === "uploaded"
@@ -526,73 +524,75 @@ function DocumentsPage() {
                       >
                         {doc.status}
                       </StatusBadge>
-                    )}
+                    </div>
+
+                    {/* Category Selector */}
+                    <div className="space-y-1.5 pt-1">
+                      <Label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Category
+                      </Label>
+                      <Select
+                        value={doc.category}
+                        onValueChange={(v) => changeCategory(doc, v as DocumentCategory)}
+                      >
+                        <SelectTrigger className="w-full rounded-xl bg-background border-border/70 h-9 text-xs font-semibold text-foreground" aria-label={`Category for ${doc.name}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {categories.map((cat) => (
+                            <SelectItem key={cat} value={cat} className="text-xs">
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="mt-4">
-                    <Label className="text-xs text-muted-foreground">Category</Label>
-                    <Select
-                      value={doc.category}
-                      onValueChange={(v) => changeCategory(doc, v as DocumentCategory)}
-                    >
-                      <SelectTrigger className="mt-2 w-full rounded-xl" aria-label={`Category for ${doc.name}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  {/* Actions Footer */}
+                  <div className="pt-3 border-t border-border/60 flex items-center justify-between gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-lg"
+                      className="rounded-xl font-semibold text-xs h-8 px-3.5"
                       onClick={() => handlePreview(doc)}
                     >
                       Preview
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-lg"
-                      aria-label={`Download ${doc.name}`}
-                      onClick={() => handleDownload(doc)}
-                    >
-                      <Download className="size-4" aria-hidden />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-lg"
-                      aria-label={`Rename ${doc.name}`}
-                      onClick={() => {
-                        if (doc.isDummy) {
-                          toast.info("Sample document cannot be renamed.");
-                          return;
-                        }
-                        setRenaming(doc);
-                        setRenameValue(doc.name);
-                      }}
-                    >
-                      <Pencil className="size-4" aria-hidden />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-lg text-destructive hover:text-destructive"
-                      aria-label={`Delete ${doc.name}`}
-                      onClick={() => remove(doc)}
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                        aria-label={`Download ${doc.name}`}
+                        onClick={() => handleDownload(doc)}
+                      >
+                        <Download className="size-4" aria-hidden />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                        aria-label={`Rename ${doc.name}`}
+                        onClick={() => {
+                          setRenaming(doc);
+                          setRenameValue(doc.name);
+                        }}
+                      >
+                        <Pencil className="size-4" aria-hidden />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-xl text-destructive/80 hover:text-destructive hover:bg-destructive/10"
+                        aria-label={`Delete ${doc.name}`}
+                        onClick={() => remove(doc)}
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </Button>
+                    </div>
                   </div>
-                </Widget>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>

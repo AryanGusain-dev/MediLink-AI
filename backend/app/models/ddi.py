@@ -65,6 +65,10 @@ class DrugCombinationDDI(BaseModel):
         ...,
         description="Actionable guidance or clinical advice string for this combination"
     )
+    source: str = Field(
+        "ML_MODEL",
+        description="Source of interaction assessment: 'DB_LIBRARY', 'ML_MODEL', or 'KNOWLEDGE_GAP'"
+    )
 
 
 class UserDDIReport(BaseModel):

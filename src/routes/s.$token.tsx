@@ -36,7 +36,7 @@ function PublicShareView() {
         }
 
         // Increment scan count in the background
-        supabase.rpc('increment_scan_count', { row_id: qrData.id }).catch(() => {
+        Promise.resolve(supabase.rpc('increment_scan_count', { row_id: qrData.id })).catch(() => {
           // Fallback if rpc is not set up
           supabase.from("qr_codes").update({ scan_count: qrData.scan_count + 1 }).eq("id", qrData.id).then();
         });

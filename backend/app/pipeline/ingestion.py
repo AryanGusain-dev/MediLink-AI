@@ -61,7 +61,18 @@ async def ingest_document(
         storage_path=storage_path,
     )
 
-    # ── Step 2: Create placeholder row in `documents` table ─────────────────────
+    # ── Step 2: Upload file bytes immediately to Supabase Storage ────────────
+    try:
+        supabase_client.storage.from_("documents").upload(
+            path=storage_path,
+            file=file_bytes,
+            file_options={"content-type": content_type, "upsert": "true"},
+        )
+        log.info("ingestion.storage_upload_complete", storage_path=storage_path)
+    except Exception as st_exc:
+        log.warning("ingestion.storage_upload_warning", error=str(st_exc))
+
+    # ── Step 3: Create placeholder row in `documents` table ─────────────────────
     try:
         result = supabase_client.table("documents").insert({
             "id": document_id,

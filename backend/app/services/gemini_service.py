@@ -2,7 +2,7 @@
 Gemini API service wrapper.
 
 Handles client initialization, prompt building, and JSON response parsing
-with retry logic for the LLM reasoning layer.
+with retry logic for the LLM reasoning layer using official google-genai SDK.
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ import json
 import structlog
 from functools import lru_cache
 
-import google.generativeai as genai
-from google.generativeai.types import GenerationConfig
+from google import genai
+from google.genai import types
 
 from app.config import get_settings
 
@@ -21,18 +21,9 @@ settings = get_settings()
 
 
 @lru_cache(maxsize=1)
-def get_gemini_model():
-    """Initialize and cache the Gemini generative model."""
-    genai.configure(api_key=settings.gemini_api_key)
-    return genai.GenerativeModel(
-        model_name=settings.gemini_model,
-        generation_config=GenerationConfig(
-            response_mime_type="application/json",
-            temperature=0.1,       # Low temperature for consistent structured output
-            top_p=0.95,
-            max_output_tokens=8192,
-        ),
-    )
+def get_genai_client() -> genai.Client:
+    """Initialize and cache the official Google GenAI Client."""
+    return genai.Client(api_key=settings.gemini_api_key)
 
 
 ANALYSIS_SCHEMA = """
@@ -163,13 +154,21 @@ Return ONLY the JSON object. No preamble, no explanation."""
 
 async def call_gemini(prompt: str) -> dict:
     """
-    Send the prompt to Gemini and return the parsed JSON dict.
-    The model is configured to return application/json.
+    Send the prompt to Gemini using official google.genai SDK and return parsed JSON dict.
     """
-    model = get_gemini_model()
-    log.info("gemini.request_start", prompt_chars=len(prompt))
+    client = get_genai_client()
+    log.info("gemini.request_start", model=settings.gemini_model, prompt_chars=len(prompt))
 
-    response = await model.generate_content_async(prompt)
+    response = await client.aio.models.generate_content(
+        model=settings.gemini_model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.1,
+            top_p=0.95,
+            max_output_tokens=8192,
+        ),
+    )
 
     raw_text = response.text or ""
     log.info("gemini.response_received", response_chars=len(raw_text))

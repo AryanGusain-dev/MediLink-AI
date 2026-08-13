@@ -36,6 +36,17 @@ log = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("startup", service=settings.app_name, debug=settings.debug)
+    # Ensure storage bucket 'documents' exists in Supabase
+    try:
+        from app.dependencies import get_supabase_client
+        supabase = get_supabase_client()
+        buckets = supabase.storage.list_buckets()
+        bucket_names = [b.name for b in buckets] if buckets else []
+        if "documents" not in bucket_names:
+            supabase.storage.create_bucket("documents", options={"public": True})
+            log.info("startup.created_documents_bucket")
+    except Exception as exc:
+        log.warning("startup.storage_bucket_check_failed", error=str(exc))
     yield
     log.info("shutdown", service=settings.app_name)
 

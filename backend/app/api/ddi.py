@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from supabase import Client
 
 from app.dependencies import get_supabase_client
-from app.models.ddi import UserDDIReport
+from app.models.ddi import UserDDIReport, DrugCombinationDDI
 from app.services.ddi_service import DDIPipelineEngine, fetch_user_medications, run_ddi_pipeline_for_user
 
 router = APIRouter(prefix="/ddi", tags=["Drug Interactions"])
@@ -39,6 +39,23 @@ class EvaluateRequest(BaseModel):
     drugs: List[str] = Field(..., description="List of medication names to evaluate", min_items=1)
     profile_id: Optional[str] = Field(None, description="Optional profile ID associated with request")
     threshold: float = Field(0.5, ge=0.0, le=1.0, description="Prediction confidence threshold")
+
+
+@router.get(
+    "/predict",
+    response_model=DrugCombinationDDI,
+    summary="Predict interaction for a single drug pair",
+)
+async def predict_single_pair(
+    drug_a: str,
+    drug_b: str,
+    threshold: float = 0.5,
+    engine: DDIPipelineEngine = Depends(get_ddi_engine),
+) -> DrugCombinationDDI:
+    """
+    Predict DDI interaction for a single pair of drugs (drug_a and drug_b).
+    """
+    return engine.predict_pair(drug_a_raw=drug_a, drug_b_raw=drug_b, threshold=threshold)
 
 
 @router.post(

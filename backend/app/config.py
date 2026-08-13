@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # Gemini
     gemini_api_key: str
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-3.5-flash"
 
     # Upload limits
     max_file_size_mb: int = 25

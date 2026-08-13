@@ -508,7 +508,30 @@ function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }:
       />
 
       <Widget title="Patient Information" icon={UserRound} delay={0}>
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]"><dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3"><div><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Full name</dt><dd className="mt-1 flex items-center gap-2 text-base font-semibold text-foreground">{p.fullName}<StatusBadge tone="success">Verified</StatusBadge></dd></div><PassportDetail label="Patient ID" value={p.userId ? `ML-${p.userId.replace("usr_", "")}` : ""} /><PassportDetail label="Age" value={p.age ? `${p.age} years` : ""} /><PassportDetail label="Gender" value={p.gender} /><PassportDetail label="Date of birth" value={p.dob ? formatDate(p.dob) : ""} /><PassportDetail label="Blood group" value={p.bloodGroup} /><PassportDetail label="Location" value={p.address} /><PassportDetail label="Phone" value={dbProfile?.phone || ""} /><PassportDetail label="Email" value={dbProfile?.email || ""} /></dl><dl className="grid content-start gap-y-5 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0"><PassportDetail label="Insurance provider" value={p.insurance.provider} /><PassportDetail label="Policy number" value={p.insurance.policyNumber} /><PassportDetail label="Last updated" value={dbProfile?.updated_at ? formatDate(dbProfile.updated_at) : ""} /></dl></div>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.8fr)]">
+          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1.5">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Full name</dt>
+              <dd className="flex items-center gap-2 text-base font-bold text-foreground min-h-[1.5rem]">
+                {p.fullName || "—"}
+                <StatusBadge tone="success">Verified</StatusBadge>
+              </dd>
+            </div>
+            <PassportDetail label="Patient ID" value={p.userId ? `ML-${p.userId.replace("usr_", "")}` : ""} />
+            <PassportDetail label="Age" value={p.age ? `${p.age} years` : ""} />
+            <PassportDetail label="Gender" value={p.gender} />
+            <PassportDetail label="Date of birth" value={p.dob ? formatDate(p.dob) : ""} />
+            <PassportDetail label="Blood group" value={p.bloodGroup} />
+            <PassportDetail label="Location" value={p.address} />
+            <PassportDetail label="Phone" value={dbProfile?.phone || ""} />
+            <PassportDetail label="Email" value={dbProfile?.email || ""} />
+          </dl>
+          <dl className="grid content-start gap-y-6 border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+            <PassportDetail label="Insurance provider" value={p.insurance?.provider || ""} />
+            <PassportDetail label="Policy number" value={p.insurance?.policyNumber || ""} />
+            <PassportDetail label="Last updated" value={dbProfile?.updated_at ? formatDate(dbProfile.updated_at) : ""} />
+          </dl>
+        </div>
       </Widget>
 
       <Widget title="Emergency Summary" icon={ShieldAlert} delay={0.05} action={<Button variant="ghost" size="sm" className="rounded-lg text-xs">View Full</Button>} className="[&>div]:border-primary/25 [&>div]:bg-primary/[0.025]">
@@ -603,7 +626,7 @@ function PatientPassport({ dbProfile, dbContacts, dbConditions, dbMedications }:
         <Widget title="AI Health Insights" icon={CheckCircle2} delay={0.2}><p className="text-sm text-muted-foreground py-2">No insights available.</p><Button variant="ghost" size="sm" className="mt-4 px-0 text-primary">Explain with AI <ChevronRight className="size-4" /></Button></Widget>
         <Widget title="Health Risk Score" icon={ShieldCheck} delay={0.22}><div className="flex items-center gap-6"><div className="grid size-28 place-items-center rounded-full border-8 border-primary/20 text-center"><span className="font-display text-2xl font-bold text-primary">--</span></div><dl className="flex-1 space-y-3">{[["Cardiovascular Risk", "neutral"], ["Diabetes Risk", "neutral"], ["Lifestyle Risk", "neutral"]].map(([label, tone]) => <div key={label} className="flex justify-between"><dt className="text-sm text-muted-foreground">{label}</dt><StatusBadge tone={tone as "neutral"}>Risk</StatusBadge></div>)}</dl></div></Widget>
         <Widget title="Immunization Status" icon={Syringe} delay={0.24}><ul className="divide-y divide-border">{p.vaccinations.map((v: any) => <li key={v.id} className="flex items-center gap-3 py-3 first:pt-0"><div className="flex-1"><p className="text-sm font-medium text-foreground">{v.name}</p><p className="text-xs text-muted-foreground">Dose {v.doses}</p></div><StatusBadge tone={v.status === "complete" ? "success" : "warning"}>{v.status}</StatusBadge></li>)}</ul>{p.vaccinations.length === 0 && <p className="text-sm text-muted-foreground py-2">No vaccinations found.</p>}</Widget>
-        <Widget title="Active Shares & Access" icon={Share2} delay={0.26}><ul className="divide-y divide-border">{p.doctors.length > 0 ? [[Stethoscope, p.doctors[0]?.name ?? "Doctor", p.doctors[0]?.specialty ?? "Care team"], [Hospital, p.doctors[0]?.hospital ?? "Hospital", "Hospital access"], [UserRound, "Family Access", "Family member"]].map(([Icon, name, role]) => <li key={String(role)} className="flex items-center gap-3 py-3 first:pt-0"><Icon className="size-4 text-primary" /><div className="flex-1"><p className="text-sm font-medium text-foreground">{String(name)}</p><p className="text-xs text-muted-foreground">{String(role)}</p></div><StatusBadge tone="success">Active</StatusBadge></li>) : null}</ul>{p.doctors.length === 0 && <p className="text-sm text-muted-foreground py-2">No active shares found.</p>}<Button asChild variant="ghost" size="sm" className="mt-3 px-0 text-primary"><Link to="/dashboard/share">View all shared profiles <ChevronRight className="size-4" /></Link></Button></Widget>
+        <Widget title="Active Shares & Access" icon={Share2} delay={0.26}><ul className="divide-y divide-border">{(p.doctors as any[]).length > 0 ? [[Stethoscope, (p.doctors as any[])[0]?.name ?? "Doctor", (p.doctors as any[])[0]?.specialty ?? "Care team"], [Hospital, (p.doctors as any[])[0]?.hospital ?? "Hospital", "Hospital access"], [UserRound, "Family Access", "Family member"]].map(([Icon, name, role]) => <li key={String(role)} className="flex items-center gap-3 py-3 first:pt-0"><Icon className="size-4 text-primary" /><div className="flex-1"><p className="text-sm font-medium text-foreground">{String(name)}</p><p className="text-xs text-muted-foreground">{String(role)}</p></div><StatusBadge tone="success">Active</StatusBadge></li>) : null}</ul>{(p.doctors as any[]).length === 0 && <p className="text-sm text-muted-foreground py-2">No active shares found.</p>}<Button asChild variant="ghost" size="sm" className="mt-3 px-0 text-primary"><Link to="/dashboard/share">View all shared profiles <ChevronRight className="size-4" /></Link></Button></Widget>
       </div>
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft"><ShieldCheck className="size-5 shrink-0 text-success" /><p className="text-sm text-muted-foreground">Your data is secure and encrypted. You are in control of your health information.</p></div>
     </div>
@@ -615,10 +638,17 @@ function EmergencyDetail({ label, value, icon: Icon, status }: { label: string; 
 }
 
 function PassportDetail({ label, value, className }: { label: string; value: string; className?: string }) {
+  const displayValue = value && String(value).trim().length > 0 ? value : "—";
   return (
-    <div className={className}>
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-foreground">{value}</dd>
+    <div className={`space-y-1.5 ${className || ""}`}>
+      <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="text-sm font-semibold text-foreground min-h-[1.5rem] flex items-center">
+        {displayValue === "—" ? (
+          <span className="text-muted-foreground/60 font-normal">—</span>
+        ) : (
+          displayValue
+        )}
+      </dd>
     </div>
   );
 }
