@@ -53,22 +53,22 @@ function getDoctorForMed(medName?: string) {
   if (!medName) return null;
   const cleaned = medName.toLowerCase().trim();
   
-  if (cleaned.includes("amlodipine")) {
+  if (cleaned.includes("amlodipine") || cleaned.includes("hypertension")) {
     return { doctor: "Dr. Ananya Roy, M.D.", specialty: "Cardiology", clinic: "Apollo Healthcare Institute", lic: "MCI-2018-94821" };
   }
-  if (cleaned.includes("metformin")) {
+  if (cleaned.includes("metformin") || cleaned.includes("diabetes") || cleaned.includes("glucose")) {
     return { doctor: "Dr. Vikram Patel, M.D.", specialty: "Endocrinology", clinic: "Max Super Speciality Hospital", lic: "MCI-2015-48192" };
   }
-  if (cleaned.includes("ibuprofen") || cleaned.includes("pantoprazole")) {
+  if (cleaned.includes("ibuprofen") || cleaned.includes("pantoprazole") || cleaned.includes("ortho")) {
     return { doctor: "Dr. Rajesh Malhotra, M.S.", specialty: "Orthopedics", clinic: "Fortis Healthcare Center", lic: "MCI-2012-33910" };
   }
-  if (cleaned.includes("paracetamol")) {
+  if (cleaned.includes("paracetamol") || cleaned.includes("acetaminophen")) {
     return { doctor: "Dr. Ananya Roy, M.D.", specialty: "Cardiology", clinic: "Apollo Healthcare Institute", lic: "MCI-2018-94821" };
   }
-  if (cleaned.includes("vitamin c")) {
+  if (cleaned.includes("vitamin c") || cleaned.includes("ascorbic")) {
     return { doctor: "Dr. Vikram Patel, M.D.", specialty: "Endocrinology", clinic: "Max Super Speciality Hospital", lic: "MCI-2015-48192" };
   }
-  if (cleaned.includes("ferrous") || cleaned.includes("vitamin d")) {
+  if (cleaned.includes("ferrous") || cleaned.includes("iron") || cleaned.includes("vitamin d") || cleaned.includes("cholecalciferol")) {
     return { doctor: "Dr. S. K. Mehta, M.D.", specialty: "Pathology & Labs", clinic: "Dr. Lal PathLabs & Diagnostics", lic: "MCI-2010-88492" };
   }
 
