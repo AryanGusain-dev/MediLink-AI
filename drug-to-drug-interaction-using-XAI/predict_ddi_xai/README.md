@@ -1,22 +1,15 @@
-# predict_ddi_xai: SHAP-Based Explainability for Drug-Drug Interaction Prediction:
+# SHAP-Based Explainability for Drug-Drug Interaction Prediction
 
-This repository contains the code used to run Kernel SHAP explanations for the [thisishe/predict_ddi](https://github.com/thisishe/predict_ddi/tree/master) model developed by Lee et al., as reported in the paper:
+This directory contains the Kernel SHAP Explainable AI (XAI) analysis pipeline for the MediLink AI Multi-Modal Drug-Drug Interaction (DDI) deep learning model.
 
-A Case Study in Explainable AI for Drug-Drug Interaction Prediction: A SHAP-Based Approach
+## 🛠️ Module Workflow Components
 
-The workflow consists of four main components:
+1. **`sampling.py`**: Generates representative input samples used as background and evaluation data for the SHAP Kernel Explainer.
+2. **`shap_analysis_kernel.py`**: Runs the Kernel SHAP Explainer across interaction labels to compute feature attributions across Structural, Target, and Gene Ontology similarity features.
+3. **`shap_visualization.ipynb`**: Generates global importance plots (bar, beeswarm) and local explanation plots (waterfall charts) of SHAP results.
+4. **`48_waterfall_plots.pdf`**: Pre-rendered qualitative waterfall charts for 48 evaluated drug interaction pairs.
 
-`edited_run.py` a modified version of the original `run.py` from the predict_ddi repository that initializes and trains the model for SHAP analysis.
+## 📌 Implementation Notes
 
-`sampling.py` generates representative input samples used as background and evaluation data for the SHAP Kernel Explainer.
-
-`shap_analysis_kernel.py` runs the Kernel SHAP Explainer to compute SHAP values for model predictions.
-
-`shap_visualization.ipynb` generates global (e.g., bar, beeswarm) and local (e.g., waterfall) visualizations of SHAP results.
-
-**Notes:** 
-
-Waterfall plots for the 48 selected samples are included in the accompanying PDF file for qualitative analysis of local explanations.
-
-This project builds on the original architecture by Lee et al. Please refer to their repository for model details and dependencies.
-All SHAP computations use Kernel SHAP, which is model-agnostic and well-suited for high-dimensional input spaces like similarity profiles.
+* All SHAP computations use **Kernel SHAP**, which is model-agnostic and well-suited for high-dimensional multi-modal similarity profiles (9,582 features).
+* Local explanations break down the positive and negative logit contributions of each feature to explain specific drug interaction predictions.
