@@ -69,6 +69,14 @@ Once running, the backend API and interactive documentation will be available at
 
 ---
 
+## 📚 Technical Architecture & Medical Knowledge
+
+For a complete breakdown of features added, ML & XAI deep learning modules, mathematical algorithms, database schema, system architecture, and required medical domain knowledge, refer to:
+👉 **[Technical Architecture & Medical Knowledge Guide](./TECHNICAL_ARCHITECTURE_AND_KNOWLEDGE.md)**
+
+---
+
+
 ## 🧪 Synthetic Medical Test Suite (`med_docs/`)
 
 The repository includes a realistic **10-document synthetic medical record suite** in `med_docs/` to test OCR extraction, Patient Passport auto-population, and Drug-Drug Interaction (DDI) safety checks without using real patient data.
