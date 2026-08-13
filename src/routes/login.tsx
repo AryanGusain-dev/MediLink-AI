@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Loader2, Lock, Mail } from "lucide-react";
+import { Loader2, Lock, Mail, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { AuthLayout } from "@/components/layout/auth-layout";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,12 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    const email = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value;
-    const password = (e.currentTarget.elements.namedItem("password") as HTMLInputElement).value;
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -44,6 +44,30 @@ function LoginPage() {
     } else {
       resetThemeToLight();
       toast.success("Welcome back to MediLink AI");
+      navigate({ to: "/dashboard" });
+    }
+  };
+
+  const handleTrialLogin = async () => {
+    setLoading(true);
+    const trialEmail = import.meta.env.VITE_TRIAL_USER_EMAIL || "rocksposiden@gmail.com";
+    const trialPassword = import.meta.env.VITE_TRIAL_USER_PASSWORD || "patient#1";
+
+    setEmail(trialEmail);
+    setPassword(trialPassword);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: trialEmail,
+      password: trialPassword,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      resetThemeToLight();
+      toast.success("Welcome back, Rahul!");
       navigate({ to: "/dashboard" });
     }
   };
@@ -66,7 +90,15 @@ function LoginPage() {
           <Label htmlFor="email">Email address</Label>
           <div className="relative">
             <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input id="email" type="email" required placeholder="you@example.com" className="h-10 rounded-xl pl-10" />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="h-10 rounded-xl pl-10"
+            />
           </div>
         </div>
 
@@ -74,7 +106,15 @@ function LoginPage() {
           <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input id="password" type="password" required placeholder="••••••••" className="h-10 rounded-xl pl-10" />
+            <Input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="h-10 rounded-xl pl-10"
+            />
           </div>
         </div>
 
@@ -87,10 +127,24 @@ function LoginPage() {
           </Link>
         </div>
 
-        <Button type="submit" size="lg" className="w-full rounded-xl shadow-soft" disabled={loading}>
-          {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-          {loading ? "Signing in…" : "Sign in"}
-        </Button>
+        <div className="space-y-3 pt-1">
+          <Button type="submit" size="lg" className="w-full rounded-xl shadow-soft font-semibold" disabled={loading}>
+            {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+            {loading ? "Signing in…" : "Sign in"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={handleTrialLogin}
+            disabled={loading}
+            className="w-full rounded-xl border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-800 dark:hover:text-emerald-200 font-semibold gap-2 transition-all shadow-xs"
+          >
+            {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Zap className="size-4 text-emerald-500 fill-emerald-500" />}
+            login as Rahul (trial)
+          </Button>
+        </div>
       </form>
     </AuthLayout>
   );
