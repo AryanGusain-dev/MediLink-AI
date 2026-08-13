@@ -478,9 +478,9 @@ function InteractionDetailModal({ combo, open, onOpenChange }: { combo: any; ope
                 {(() => {
                   const renderDrugCard = (drugName: string) => {
                     const doc = getDoctorForMed(drugName);
-                    const isSimulated = combo.is_simulation || !doc;
+                    const isProspective = !doc || (combo.simulated_drug && combo.simulated_drug.toLowerCase().trim() === drugName.toLowerCase().trim());
 
-                    if (isSimulated || !doc) {
+                    if (isProspective || !doc) {
                       return (
                         <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-1">
                           <div className="flex items-center justify-between">
@@ -779,7 +779,7 @@ function AIPage() {
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
       const input = simulatedDrug.trim();
       
-      // Target medications to check against
+      // Target medications strictly from user's active health records
       let activeMeds = ddiReport?.medications_list || [];
       if (activeMeds.length === 0 && profile?.id) {
         try {
@@ -796,13 +796,9 @@ function AIPage() {
         }
       }
 
-      if (activeMeds.length === 0) {
-        activeMeds = ["Amlodipine", "Ibuprofen", "Metformin", "Paracetamol", "Vitamin C"];
-      }
-
       const newSims: any[] = [];
 
-      // If user provided a explicit pair like "Amlodipine + Ibuprofen" or "Amlodipine, Ibuprofen"
+      // Case 1: If user provided an explicit pair like "Amlodipine + Aspirin" or "Amlodipine, Aspirin"
       if (input.includes("+") || input.includes(",")) {
         const parts = input.split(/[+,]/).map(p => p.trim()).filter(Boolean);
         if (parts.length >= 2) {
@@ -810,17 +806,25 @@ function AIPage() {
           if (res.ok) {
             const combo = await res.json();
             combo.is_simulation = true;
+            combo.simulated_drug = parts[1];
             newSims.push(combo);
           }
         }
       } else {
-        // Run against active/baseline list
+        // Case 2: Run prospective medicine against user's active medications ONLY
+        if (activeMeds.length === 0) {
+          toast.info("No active medications found in your health records to compare against. Upload medical documents to auto-populate your current prescriptions, or enter a pair like 'Amlodipine + Aspirin'.");
+          setSimulating(false);
+          return;
+        }
+
         for (const med of activeMeds) {
-          if (med.toLowerCase() === input.toLowerCase()) continue;
+          if (med.toLowerCase().trim() === input.toLowerCase().trim()) continue;
           const res = await fetch(`${apiUrl}/ddi/predict?drug_a=${encodeURIComponent(med)}&drug_b=${encodeURIComponent(input)}`);
           if (res.ok) {
             const combo = await res.json();
             combo.is_simulation = true;
+            combo.simulated_drug = input;
             newSims.push(combo);
           }
         }
@@ -828,7 +832,7 @@ function AIPage() {
 
       if (newSims.length > 0) {
         setSimulatedResults(newSims);
-        toast.success(`Simulated safety check for "${input}" against ${newSims.length} medication(s).`);
+        toast.success(`Simulated safety check for prospective drug "${input}" against ${newSims.length} active medication(s) in your health records.`);
       } else {
         toast.info(`Could not evaluate simulation for "${input}".`);
       }
