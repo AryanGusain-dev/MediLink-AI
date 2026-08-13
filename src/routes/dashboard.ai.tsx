@@ -50,36 +50,30 @@ const DOCTORS_LIST = [
 ];
 
 function getDoctorForMed(medName?: string) {
-  if (!medName) return DOCTORS_LIST[0];
+  if (!medName) return null;
   const cleaned = medName.toLowerCase().trim();
   
-  if (cleaned.includes("amlodipine") || cleaned.includes("hypertension") || cleaned.includes("heart")) {
-    return DOCTORS_LIST[0]; // Cardiology
+  if (cleaned.includes("amlodipine")) {
+    return { doctor: "Dr. Ananya Roy, M.D.", specialty: "Cardiology", clinic: "Apollo Healthcare Institute", lic: "MCI-2018-94821" };
   }
-  if (cleaned.includes("metformin") || cleaned.includes("glucose") || cleaned.includes("hba1c") || cleaned.includes("diabetes")) {
-    return DOCTORS_LIST[1]; // Endocrinology
+  if (cleaned.includes("metformin")) {
+    return { doctor: "Dr. Vikram Patel, M.D.", specialty: "Endocrinology", clinic: "Max Super Speciality Hospital", lic: "MCI-2015-48192" };
   }
-  if (cleaned.includes("ibuprofen") || cleaned.includes("ortho") || cleaned.includes("bone") || cleaned.includes("joint")) {
-    return DOCTORS_LIST[2]; // Orthopedics
+  if (cleaned.includes("ibuprofen") || cleaned.includes("pantoprazole")) {
+    return { doctor: "Dr. Rajesh Malhotra, M.S.", specialty: "Orthopedics", clinic: "Fortis Healthcare Center", lic: "MCI-2012-33910" };
   }
-  if (cleaned.includes("pantoprazole") || cleaned.includes("gastro") || cleaned.includes("bilirubin")) {
-    return DOCTORS_LIST[3]; // Gastroenterology
+  if (cleaned.includes("paracetamol")) {
+    return { doctor: "Dr. Ananya Roy, M.D.", specialty: "Cardiology", clinic: "Apollo Healthcare Institute", lic: "MCI-2018-94821" };
   }
-  if (cleaned.includes("paracetamol") || cleaned.includes("swamy") || cleaned.includes("respiratory")) {
-    return DOCTORS_LIST[4]; // Pulmonology
+  if (cleaned.includes("vitamin c")) {
+    return { doctor: "Dr. Vikram Patel, M.D.", specialty: "Endocrinology", clinic: "Max Super Speciality Hospital", lic: "MCI-2015-48192" };
   }
-  if (cleaned.includes("cbc") || cleaned.includes("haemoglobin") || cleaned.includes("cholesterol") || cleaned.includes("tsh")) {
-    return DOCTORS_LIST[5]; // Pathology
+  if (cleaned.includes("ferrous") || cleaned.includes("vitamin d")) {
+    return { doctor: "Dr. S. K. Mehta, M.D.", specialty: "Pathology & Labs", clinic: "Dr. Lal PathLabs & Diagnostics", lic: "MCI-2010-88492" };
   }
 
-  // Hash fallback to distribute evenly across all doctors
-  let hash = 0;
-  for (let i = 0; i < cleaned.length; i++) {
-    hash = (hash << 5) - hash + cleaned.charCodeAt(i);
-    hash |= 0;
-  }
-  const idx = Math.abs(hash) % DOCTORS_LIST.length;
-  return DOCTORS_LIST[idx];
+  // Any other medication is NOT prescribed in uploaded records (simulated / pre-purchase check)
+  return null;
 }
 
 interface DDIReport {
@@ -474,36 +468,59 @@ function InteractionDetailModal({ combo, open, onOpenChange }: { combo: any; ope
             </div>
           )}
 
-          {/* Attending Specialists & Prescribing Clinics */}
+          {/* Medication Source & Prescribing Context */}
           {combo.drug_a && combo.drug_b && (
             <div className="p-5 rounded-2xl border border-border/80 bg-surface space-y-3">
               <h5 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <UserRound className="size-3.5 text-primary" /> Attending Specialists & Prescribing Clinics
+                <UserRound className="size-3.5 text-primary" /> Medication Source & Prescribing Context
               </h5>
               <div className="grid gap-3 sm:grid-cols-2 pt-1">
                 {(() => {
-                  const docA = getDoctorForMed(combo.drug_a);
-                  const docB = getDoctorForMed(combo.drug_b);
+                  const renderDrugCard = (drugName: string) => {
+                    const doc = getDoctorForMed(drugName);
+                    const isSimulated = combo.is_simulation || !doc;
+
+                    if (isSimulated || !doc) {
+                      return (
+                        <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{drugName}</span>
+                            <span className="text-[9px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/20">
+                              Pre-Purchase Check
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-foreground flex items-center gap-1.5 pt-0.5">
+                            <Pill className="size-3.5 text-amber-500 shrink-0" />
+                            Not Prescribed Yet
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">Prospective medicine checked before buying</p>
+                          <p className="text-[10px] font-mono text-amber-700/80 dark:text-amber-300/80">Status: Patient Pre-Purchase Safety Screening</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="p-3.5 rounded-xl bg-background border border-border/60 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{drugName}</span>
+                          <span className="text-[9px] font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
+                            Active Prescription
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5 pt-0.5">
+                          <Stethoscope className="size-3.5 text-primary shrink-0" />
+                          {doc.doctor}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">{doc.specialty} · {doc.clinic}</p>
+                        <p className="text-[10px] font-mono text-muted-foreground/70">Lic: {doc.lic}</p>
+                      </div>
+                    );
+                  };
+
                   return (
                     <>
-                      <div className="p-3.5 rounded-xl bg-background border border-border/60 space-y-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{combo.drug_a}</span>
-                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                          <Stethoscope className="size-3.5 text-primary shrink-0" />
-                          {docA.doctor}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">{docA.specialty} · {docA.clinic}</p>
-                        <p className="text-[10px] font-mono text-muted-foreground/70">Lic: {docA.lic}</p>
-                      </div>
-                      <div className="p-3.5 rounded-xl bg-background border border-border/60 space-y-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{combo.drug_b}</span>
-                        <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                          <Stethoscope className="size-3.5 text-primary shrink-0" />
-                          {docB.doctor}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">{docB.specialty} · {docB.clinic}</p>
-                        <p className="text-[10px] font-mono text-muted-foreground/70">Lic: {docB.lic}</p>
-                      </div>
+                      {renderDrugCard(combo.drug_a)}
+                      {renderDrugCard(combo.drug_b)}
                     </>
                   );
                 })()}
@@ -792,6 +809,7 @@ function AIPage() {
           const res = await fetch(`${apiUrl}/ddi/predict?drug_a=${encodeURIComponent(parts[0])}&drug_b=${encodeURIComponent(parts[1])}`);
           if (res.ok) {
             const combo = await res.json();
+            combo.is_simulation = true;
             newSims.push(combo);
           }
         }
@@ -802,6 +820,7 @@ function AIPage() {
           const res = await fetch(`${apiUrl}/ddi/predict?drug_a=${encodeURIComponent(med)}&drug_b=${encodeURIComponent(input)}`);
           if (res.ok) {
             const combo = await res.json();
+            combo.is_simulation = true;
             newSims.push(combo);
           }
         }
