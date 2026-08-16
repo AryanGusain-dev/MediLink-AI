@@ -176,14 +176,53 @@ async def process_medilink_mode(
             doc_res = supabase.from_("documents").select("*").eq("profile_id", profile_id).execute()
             if doc_res.data:
                 uploaded_context += "\nUPLOADED MEDICAL DOCUMENTS:\n"
+                
+                # Tokenize user query for document relevance matching
+                query_words = set(re.findall(r'[a-zA-Z0-9]+', query.lower())) - {
+                    "what", "is", "my", "the", "a", "an", "and", "or", "in", "to", "for",
+                    "with", "take", "taking", "are", "can", "show", "get", "view", "pdf",
+                    "report", "document", "file", "record", "medical", "check", "tell", "me", "about"
+                }
+
+                doc_scores = []
                 for doc in doc_res.data:
                     d_id = doc.get("id")
                     f_name = doc.get('file_name') or doc.get('title') or 'Medical_Record.pdf'
                     f_status = doc.get('status', 'COMPLETED')
                     f_summary = doc.get('summary', 'Processed medical record')
+                    f_cat = doc.get('category', '')
+                    extracted_meds = doc.get("extracted_medications") or []
+
                     uploaded_context += f"- Document '{f_name}' (ID={d_id}): Status={f_status}. Summary: {f_summary}\n"
-                    
-                    # Direct link to stream this specific document PDF inline
+
+                    if isinstance(extracted_meds, list):
+                        meds_list.extend(extracted_meds)
+                    elif isinstance(extracted_meds, str):
+                        meds_list.append(extracted_meds)
+
+                    # Calculate keyword relevance match score for citing this doc
+                    doc_text_blob = f"{f_name} {f_summary} {f_cat} {' '.join(extracted_meds if isinstance(extracted_meds, list) else [str(extracted_meds)])}".lower()
+                    match_count = sum(1 for word in query_words if word in doc_text_blob)
+
+                    doc_scores.append({
+                        "doc": doc,
+                        "d_id": d_id,
+                        "f_name": f_name,
+                        "f_summary": f_summary,
+                        "match_count": match_count,
+                    })
+
+                # Sort documents by relevance match score
+                doc_scores.sort(key=lambda x: x["match_count"], reverse=True)
+
+                # Cite only documents that match specific query keywords, or top 2 for general queries
+                has_specific_matches = any(item["match_count"] > 0 for item in doc_scores)
+                cited_docs = [item for item in doc_scores if item["match_count"] > 0] if has_specific_matches else doc_scores[:2]
+
+                for item in cited_docs:
+                    d_id = item["d_id"]
+                    f_name = item["f_name"]
+                    f_summary = item["f_summary"]
                     doc_url = f"http://localhost:8000/documents/{d_id}/download" if d_id else "/dashboard/documents"
 
                     sources.append({
@@ -191,15 +230,10 @@ async def process_medilink_mode(
                         "source": f"Supabase Vault (ID: {str(d_id)[:8]}...)",
                         "snippet": f"Summary: {f_summary}",
                         "url": doc_url,
-                        "relevance": 0.99,
+                        "relevance": 0.99 if item["match_count"] > 0 else 0.85,
                         "type": "document",
                     })
 
-                    if doc.get("extracted_medications"):
-                        if isinstance(doc["extracted_medications"], list):
-                            meds_list.extend(doc["extracted_medications"])
-                        elif isinstance(doc["extracted_medications"], str):
-                            meds_list.append(doc["extracted_medications"])
 
 
             # Deduplicate meds list
