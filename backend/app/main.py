@@ -12,8 +12,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analysis, ddi, documents, health
+from app.api import analysis, ddi, documents, health, rag
 from app.config import get_settings
+
 
 settings = get_settings()
 
@@ -78,4 +79,6 @@ app.include_router(health.router)
 app.include_router(documents.router)
 app.include_router(analysis.router)
 app.include_router(ddi.router)
+app.include_router(rag.router)
+
 
