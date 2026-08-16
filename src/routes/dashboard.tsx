@@ -3,6 +3,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { DashboardTopbar } from "@/components/layout/dashboard-topbar";
 import { supabase } from "@/lib/supabase";
+import { RAGProvider } from "@/contexts/rag-context";
+import { RAGSidebar } from "@/components/chat/rag-sidebar";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: async ({ location }) => {
@@ -23,16 +25,19 @@ export const Route = createFileRoute("/dashboard")({
 
 function DashboardLayout() {
   return (
-    <SidebarProvider>
-      <div className="flex min-h-dvh w-full bg-background">
-        <AppSidebar />
-        <SidebarInset className="min-w-0 bg-background">
-          <DashboardTopbar />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-            <Outlet />
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    <RAGProvider>
+      <SidebarProvider>
+        <div className="flex min-h-dvh w-full bg-background">
+          <AppSidebar />
+          <SidebarInset className="min-w-0 bg-background">
+            <DashboardTopbar />
+            <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+              <Outlet />
+            </main>
+          </SidebarInset>
+          <RAGSidebar />
+        </div>
+      </SidebarProvider>
+    </RAGProvider>
   );
 }

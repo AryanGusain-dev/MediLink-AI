@@ -22,6 +22,7 @@ import {
   Cpu,
   UserRound,
   Stethoscope,
+  BookOpen,
 } from "lucide-react";
 import { PageHeader, StatusBadge } from "@/components/shared/page-header";
 import { Widget } from "@/components/shared/widget";
@@ -29,6 +30,10 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useRAG } from "@/contexts/rag-context";
+
+
+
 
 export const Route = createFileRoute("/dashboard/ai")({
   component: AIPage,
@@ -715,6 +720,9 @@ function AIPage() {
   const [ddiReport, setDdiReport] = useState<DDIReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const { openRAG } = useRAG();
+
+
 
   // Live "What-If" Simulator state
   const [simulatedDrug, setSimulatedDrug] = useState("");
@@ -910,6 +918,16 @@ function AIPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={openRAG}
+              className="rounded-xl border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold gap-1.5 shadow-xs"
+            >
+              <BookOpen className="size-3.5 text-primary" />
+              <span>RAG Knowledge Sidebar</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleRerun}
               disabled={loading}
               className="rounded-xl border-primary/30 text-xs font-semibold text-foreground hover:bg-primary/10 gap-1.5 shadow-xs"
@@ -921,6 +939,7 @@ function AIPage() {
               <Bot className="mr-1.5 size-4 inline" /> Gemini 3.5 & XAI Active
             </StatusBadge>
           </div>
+
         }
       />
 
@@ -1213,6 +1232,7 @@ function AIPage() {
     </div>
   );
 }
+
 
 
 
