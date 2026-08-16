@@ -154,21 +154,44 @@ Return ONLY the JSON object. No preamble, no explanation."""
 
 async def call_gemini(prompt: str) -> dict:
     """
-    Send the prompt to Gemini using official google.genai SDK and return parsed JSON dict.
+    Send the prompt to Gemini using official google.genai SDK with multi-model rate-limit fallback.
     """
     client = get_genai_client()
     log.info("gemini.request_start", model=settings.gemini_model, prompt_chars=len(prompt))
 
-    response = await client.aio.models.generate_content(
-        model=settings.gemini_model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1,
-            top_p=0.95,
-            max_output_tokens=8192,
-        ),
-    )
+    models_to_try = [
+        settings.gemini_model or "gemini-3.5-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash",
+    ]
+
+    last_exc = None
+    response = None
+
+    for m in models_to_try:
+        try:
+            log.info("gemini.attempting_model", model=m)
+            response = await client.aio.models.generate_content(
+                model=m,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                    top_p=0.95,
+                    max_output_tokens=8192,
+                ),
+            )
+            if response and response.text:
+                log.info("gemini.model_success", model=m)
+                break
+        except Exception as exc:
+            last_exc = exc
+            log.warning("gemini.model_attempt_failed", model=m, error=str(exc))
+
+    if not response or not response.text:
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("No response generated from Gemini API models")
 
     raw_text = response.text or ""
     log.info("gemini.response_received", response_chars=len(raw_text))
@@ -182,3 +205,4 @@ async def call_gemini(prompt: str) -> dict:
 
     parsed = json.loads(raw_text.strip())
     return parsed
+
