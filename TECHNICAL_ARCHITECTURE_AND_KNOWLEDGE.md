@@ -16,9 +16,9 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 
 | Module / Area | Feature Added | Key Function & Purpose |
 | :--- | :--- | :--- |
-| **Synthetic Medical Suite** | 10-Document Test Suite (`med_docs/`) | Realistic synthetic medical records covering Cardiology, Pathology, Endocrinology, and Orthopedics to test OCR, passport extraction, and DDI safety without real patient data. |
-| **Master Vault PDF** | Combined Vault (`00_Combined_Medical_Record_Vault.pdf`) | 10-page master PDF consolidating patient history across multiple specialists into a single uploadable document. |
-| **PDF Generation Engine** | Python Script (`scripts/create_pdf_docs.py`) | ReportLab-based automated script generating structured medical PDFs with headers, vitals tables, lab metrics, and prescriptions. |
+| **Sample Medical Documents** | 10-Document Suite (`example_medical_docs/`) | Sample medical records covering Cardiology, Pathology, Endocrinology, and Orthopedics to try OCR, passport extraction, and DDI safety without real patient data. |
+| **Master Vault PDF** | Combined Vault (`00_Combined_Medical_Record_Vault.pdf`) | 10-page master PDF consolidating sample history across multiple specialists into a single uploadable document. |
+| **PDF Generation Engine** | Python Script (`scripts/create_pdf_docs.py`) | ReportLab-based automated script generating structured sample medical PDFs with headers, vitals tables, lab metrics, and prescriptions. |
 | **DDI Deep Learning Engine** | Sub-Module Integration (`drug-to-drug-interaction-using-XAI/`) | Multi-modal neural network for predicting 1,308 distinct drug interaction types across 544 canonical drugs. |
 | **Textual XAI Engine** | Saliency & Gradient Attribution (`xai_service.py`) | Lightweight, low-RAM gradient attribution module ($G_i \times x_i$) generating human-readable explanations of AI predictions on GTX 1650/8GB setups. |
 | **DDI Safety Tagging Matrix** | Rule & ML Dual Engine | Hybrid verification system yielding `SAFE` (Green), `HIGH RISK` (Red DB Library Hit), `MODERATE RISK` (Yellow ML Model), or `KNOWLEDGE GAP` (Orange Warning). |
@@ -77,7 +77,8 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 | **Structural Similarity Matrix (SS)** | SMILES Fingerprints | $544 \times 544$ matrix ($3,194$ features) | Measures chemical structure similarity. |
 | **Target Similarity Matrix (TS)** | UniProt Protein Targets | $544 \times 544$ matrix ($3,194$ features) | Measures shared receptor and enzyme binding profiles. |
 | **Gene Ontology Matrix (GS)** | GO Biological Process Annotations | $544 \times 544$ matrix ($3,194$ features) | Measures shared cellular and biological functional pathways. |
-| **Synthetic Test Suite (`med_docs`)** | ReportLab PDF Generator | **10 PDF Documents** + 1 Combined Master Vault | System verification, demo presentation, OCR, and DDI pipeline testing. |
+| **Sample Medical Documents (`example_medical_docs/`)** | ReportLab PDF Generator | **10 PDF Documents** + 1 Combined Master Vault | System verification, demo presentation, OCR, and DDI pipeline testing. |
+
 
 ---
 

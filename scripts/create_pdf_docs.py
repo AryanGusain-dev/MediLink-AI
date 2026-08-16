@@ -8,8 +8,9 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
-output_dir = r"c:\Users\Aryan Saini\Documents\Git Projects\MediLink-AI\med_docs"
+output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "example_medical_docs")
 os.makedirs(output_dir, exist_ok=True)
+
 
 styles = getSampleStyleSheet()
 

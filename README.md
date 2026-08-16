@@ -92,12 +92,13 @@ For in-depth mathematical formulas, 4-Tier RAG specifications, PyTorch model tra
 
 ---
 
-## 🧪 Synthetic Medical Test Suite (`med_docs/`)
+## 🧪 Sample Medical Test Documents (`example_medical_docs/`)
 
-The repository includes a realistic **10-document synthetic medical record suite** in `med_docs/` to test OCR extraction, Patient Passport auto-population, and Drug-Drug Interaction (DDI) safety checks without using real patient data.
+The repository includes a realistic **10-document sample medical record suite** in `example_medical_docs/` for trying out OCR extraction, Patient Passport auto-population, and Drug-Drug Interaction (DDI) safety checks without needing to provide personal medical files.
 
 ### Master Combined Vault File
-- **`med_docs/00_Combined_Medical_Record_Vault.pdf`**: A single 10-page PDF containing the entire patient history across 3 specialist doctors and a pathology laboratory.
+- **`example_medical_docs/00_Combined_Medical_Record_Vault.pdf`**: A single 10-page sample PDF containing full patient history across 3 specialist doctors and a pathology laboratory.
+
 
 ### Expected Safety Tagging Matrix
 
