@@ -51,7 +51,9 @@ interface RAGSource {
   snippet?: string;
   relevance?: number;
   url?: string;
+  type?: "document" | "ml_model" | "pubmed" | string;
 }
+
 
 interface ToolCallStep {
   name: string;
@@ -748,39 +750,74 @@ export function RAGSidebar() {
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="pt-2 border-t border-border/50 space-y-1.5 font-sans">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 font-display">
-                          <FileText className="w-3 h-3 text-primary" />
-                          Retrieved Evidence & Research
+                          <BookOpen className="w-3 h-3 text-primary" />
+                          Retrieved Evidence & Citations ({msg.sources.length})
                         </span>
                         <div className="space-y-1.5">
-                          {msg.sources.map((src, i) => (
-                            <div
-                              key={i}
-                              className="p-2 rounded-xl bg-muted/40 border border-border/80 text-[11px] space-y-0.5 font-sans"
-                            >
-                              <div className="font-semibold text-foreground flex items-center justify-between">
-                                <span className="line-clamp-1">{src.title || src.source}</span>
-                                {src.relevance && (
-                                  <span className="text-[9px] text-primary font-display font-bold shrink-0 ml-1">
-                                    {(src.relevance * 100).toFixed(0)}% Match
+                          {msg.sources.map((src, i) => {
+                            const isInternal = src.url?.startsWith("/");
+                            return (
+                              <div
+                                key={i}
+                                className="p-2.5 rounded-xl bg-muted/40 border border-border/80 text-[11px] space-y-1 font-sans hover:border-primary/40 transition-colors"
+                              >
+                                <div className="font-semibold text-foreground flex items-center justify-between gap-2">
+                                  <span className="line-clamp-1 flex items-center gap-1.5 font-display text-xs">
+                                    {src.type === "document" && <FileText className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                    {src.type === "ml_model" && <Brain className="w-3.5 h-3.5 text-purple-500 shrink-0" />}
+                                    {src.type === "pubmed" && <BookOpen className="w-3.5 h-3.5 text-teal shrink-0" />}
+                                    {src.title || src.source}
                                   </span>
+                                  {src.relevance && (
+                                    <span className="text-[9px] text-primary font-display font-bold shrink-0">
+                                      {(src.relevance * 100).toFixed(0)}% Match
+                                    </span>
+                                  )}
+                                </div>
+
+                                {src.snippet && (
+                                  <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+                                    {src.snippet}
+                                  </p>
+                                )}
+
+                                {src.url && (
+                                  <div className="pt-0.5">
+                                    {isInternal ? (
+                                      <button
+                                        onClick={() => {
+                                          closeRAG();
+                                          window.location.href = src.url!;
+                                        }}
+                                        className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-bold"
+                                      >
+                                        <span>
+                                          {src.type === "document"
+                                            ? "View Patient Document"
+                                            : "View DDI & XAI Model Details"}
+                                        </span>
+                                        <ChevronRight className="w-3 h-3" />
+                                      </button>
+                                    ) : (
+                                      <a
+                                        href={src.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-bold"
+                                      >
+                                        <span>Open PubMed Study (PMID)</span>
+                                        <ExternalLink className="w-3 h-3" />
+                                      </a>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                              {src.url && (
-                                <a
-                                  href={src.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-medium"
-                                >
-                                  <span>Open Article</span>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </a>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
+
                   </div>
 
                   {msg.sender === "user" && (

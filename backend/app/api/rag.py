@@ -119,12 +119,14 @@ async def search_pubmed(query: str, max_results: int = 3) -> List[Dict[str, Any]
                     authors = [a.get("name") for a in doc.get("authors", [])[:2]]
                     authors_str = ", ".join(authors) if authors else "NCBI Researchers"
                     results.append({
-                        "title": title,
-                        "source": f"PubMed (PMID: {pmid}) — {source} ({pubdate})",
+                        "title": f"PubMed: {title}",
+                        "source": f"NCBI Journal (PMID: {pmid}) — {source} ({pubdate})",
                         "snippet": f"Authors: {authors_str}. PMID: {pmid}. Journal: {source}",
                         "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
                         "relevance": 0.95,
+                        "type": "pubmed",
                     })
+
             return results
     except Exception as exc:
         log.warning("pubmed.search_error", error=str(exc))
@@ -170,19 +172,25 @@ async def process_medilink_mode(
                     if any(kw in param.lower() for kw in ["medication", "drug", "prescription", "amlodipine", "metformin", "paracetamol", "ibuprofen", "aspirin"]):
                         meds_list.append(param)
 
-                sources.append({
-                    "title": "Uploaded Patient Health Records",
-                    "source": "Supabase Clinical Database",
-                    "snippet": f"Retrieved {len(res_vals.data)} verified lab values & medical parameters.",
-                    "relevance": 0.99,
-                })
-
             # Check documents table for uploaded files & extracted meds
             doc_res = supabase.from_("documents").select("*").eq("profile_id", profile_id).execute()
             if doc_res.data:
                 uploaded_context += "\nUPLOADED MEDICAL DOCUMENTS:\n"
                 for doc in doc_res.data:
-                    uploaded_context += f"- Document '{doc.get('file_name')}': Status={doc.get('status')}. Summary: {doc.get('summary', 'Processed')}\n"
+                    f_name = doc.get('file_name', 'Medical_Record.pdf')
+                    f_status = doc.get('status', 'COMPLETED')
+                    f_summary = doc.get('summary', 'Processed medical record')
+                    uploaded_context += f"- Document '{f_name}': Status={f_status}. Summary: {f_summary}\n"
+                    
+                    sources.append({
+                        "title": f"Patient PDF: {f_name}",
+                        "source": f"Supabase Health Vault (Status: {f_status})",
+                        "snippet": f"Summary: {f_summary}",
+                        "url": "/dashboard/documents",
+                        "relevance": 0.99,
+                        "type": "document",
+                    })
+
                     if doc.get("extracted_medications"):
                         if isinstance(doc["extracted_medications"], list):
                             meds_list.extend(doc["extracted_medications"])
@@ -210,14 +218,17 @@ async def process_medilink_mode(
                         f"- Pair {combo.pair_label}: Status={combo.source}, Risk={combo.overall_risk_level}. "
                         f"XAI Explanation: {combo.xai_explanation or 'Evaluated under GNN matrix space'}\n"
                     )
-                sources.append({
-                    "title": "MediLink Multi-Modal DDI & Textual XAI Model",
-                    "source": "GNN + DrugBank Similarity Space Engine",
-                    "snippet": f"Evaluated {len(report.combinations)} drug pairs across active medications. High Risk pairs: {report.high_risk_combinations}.",
-                    "relevance": 0.98,
-                })
+                    sources.append({
+                        "title": f"PyTorch DDI Model: {combo.pair_label} ({combo.overall_risk_level})",
+                        "source": f"GNN Engine — {combo.source}",
+                        "snippet": f"Risk Level: {combo.overall_risk_level}. Saliency: {combo.xai_explanation or 'Evaluated under 9,582 feature matrix space'}",
+                        "url": "/dashboard/ai",
+                        "relevance": 0.98,
+                        "type": "ml_model",
+                    })
         except Exception as e:
             log.warning("medilink.ddi_eval_failed", error=str(e))
+
 
 
 
