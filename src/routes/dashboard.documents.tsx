@@ -177,18 +177,37 @@ function DocumentsPage() {
 
     setProgress(15);
     const fileList = Array.from(files);
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      
-      setProgress(40 + Math.round(((i + 0.5) / fileList.length) * 40));
+    if (fileList.length > 1) {
+      const formData = new FormData();
+      fileList.forEach((file) => formData.append("files", file));
+      formData.append("profile_id", profileId);
 
+      try {
+        setProgress(50);
+        const response = await fetch(`${apiUrl}/documents/upload-batch`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Batch upload failed with status ${response.status}`);
+        }
+
+        toast.success(`Uploaded batch of ${fileList.length} documents (1 Consolidated AI Request)`);
+      } catch (err) {
+        console.error("Batch upload error:", err);
+        toast.error("Failed to upload batch documents");
+      }
+    } else {
+      const file = fileList[0];
+      setProgress(50);
       const formData = new FormData();
       formData.append("file", file);
       formData.append("profile_id", profileId);
 
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
         const response = await fetch(`${apiUrl}/documents/upload`, {
           method: "POST",
           body: formData,
@@ -197,7 +216,7 @@ function DocumentsPage() {
         if (!response.ok) {
           throw new Error(`Upload failed with status ${response.status}`);
         }
-        
+
         toast.success(`Uploaded ${file.name}`);
       } catch (err) {
         console.error("Upload error:", err);
@@ -209,6 +228,7 @@ function DocumentsPage() {
     setTimeout(() => setProgress(null), 400);
     fetchUserDocuments();
   };
+
 
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
