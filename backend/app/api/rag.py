@@ -6,6 +6,7 @@ Exposes endpoints for querying medical literature, DDI XAI engine, uploaded user
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -198,7 +199,7 @@ async def process_medilink_mode(
                             "summary": f_summary,
                             "category": f_cat,
                             "medications": ext_meds,
-                            "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower(), "hypertension", "blood pressure", "checkup"],
+                            "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower()],
                             "is_sample": False
                         })
             except Exception as e_docs:
@@ -248,7 +249,7 @@ async def process_medilink_mode(
         query_words = set(re.findall(r'[a-zA-Z0-9]+', q_lower)) - {
             "what", "is", "my", "the", "a", "an", "and", "or", "in", "to", "for",
             "with", "take", "taking", "are", "can", "show", "get", "view", "pdf",
-            "report", "document", "file", "record", "medical", "check", "tell", "me", "about", "which", "says", "i", "have", "where", "does", "it", "do", "you", "doc", "docs"
+            "report", "document", "file", "record", "medical", "check", "tell", "me", "about", "which", "says", "i", "have", "where", "does", "it", "do", "you", "doc", "docs", "any"
         }
 
         doc_scores = []
@@ -261,9 +262,8 @@ async def process_medilink_mode(
             # Check keyword & semantic matches
             text_blob = f"{f_name} {f_summary} {d.get('category','')} {' '.join(d['keywords'])}".lower()
             
-            # Direct topic matches (e.g. "hypertension" -> "03_Hypertension_Followup.pdf")
-            match_count = sum(1 for kw in d["keywords"] if kw in q_lower)
-            match_count += sum(1 for word in query_words if word in text_blob)
+            # Match strictly against user query terms
+            match_count = sum(1 for word in query_words if word in text_blob)
 
             doc_scores.append({
                 "d_id": d_id,
@@ -275,10 +275,8 @@ async def process_medilink_mode(
 
         doc_scores.sort(key=lambda x: x["match_count"], reverse=True)
 
-
-        # Filter cited documents: pick documents with match_count > 0, or top 2 if query is general
-        has_specific_matches = any(item["match_count"] > 0 for item in doc_scores)
-        cited_docs = [item for item in doc_scores if item["match_count"] > 0] if has_specific_matches else doc_scores[:2]
+        # Filter cited documents: cite ONLY documents with match_count > 0 (top 2 maximum)
+        cited_docs = [item for item in doc_scores if item["match_count"] > 0][:2]
 
         for item in cited_docs:
             d_id = item["d_id"]
@@ -387,6 +385,10 @@ FORMATTING & RESPONSE GUIDELINES:
      [ACTION: add_medication | MedicationName]
    - If the user mentions a drug allergy:
      [ACTION: add_allergy | AllergyName]
+4. DOCUMENT CITATIONS:
+   - If your answer references or utilizes specific patient document(s) from the vault, append this tag at the very end of your response:
+     [CITED_DOCS: doc_id_1, doc_id_2]
+   - Include only the document IDs of files you actually referenced or cited.
 """
 
 
@@ -410,9 +412,39 @@ FORMATTING & RESPONSE GUIDELINES:
 
         answer_text = response.text if response and response.text else "No response synthesized."
 
+        # Parse [CITED_DOCS: ...] tag from Gemini response if present
+        if "[CITED_DOCS:" in answer_text:
+            try:
+                parts = answer_text.split("[CITED_DOCS:")
+                answer_text = parts[0].strip()
+                raw_ids = parts[1].split("]")[0]
+                cited_doc_ids = [i.strip() for i in raw_ids.split(",") if i.strip()]
+                
+                # Filter sources to only include document cards explicitly cited by Gemini
+                gemini_cited_docs = [d for d in docs_to_eval if str(d["id"]) in cited_doc_ids or any(cid in str(d["id"]) for cid in cited_doc_ids)]
+                if gemini_cited_docs:
+                    sources = [s for s in sources if s.get("type") != "document"]
+                    for item in gemini_cited_docs:
+                        d_id = item["id"]
+                        f_name = item["file_name"]
+                        f_summary = item["summary"]
+                        is_samp = item.get("is_sample", False)
+                        doc_url = f"http://localhost:8000/documents/{d_id}/download" if d_id and not str(d_id).startswith("sample_") else "/dashboard/documents"
+                        sources.insert(0, {
+                            "title": f"Patient PDF: {f_name}",
+                            "source": "Sample Demo Record (example_medical_docs/)" if is_samp else f"Supabase Vault (ID: {str(d_id)[:10]})",
+                            "snippet": f"Summary: {f_summary}",
+                            "url": doc_url,
+                            "relevance": 0.99,
+                            "type": "document",
+                        })
+            except Exception as parse_err:
+                log.warning("medilink.parse_cited_docs_failed", error=str(parse_err))
+
     except Exception as exc:
         log.error("medilink.gemini_synthesis_failed", error=str(exc))
         answer_text = f"MediLink Unified Engine Response:\nBased on medical knowledge and literature search for '{query}':\n" + (rag_context or "Clinical query processed.")
+
 
     tool_steps = [
         {"name": "MediLink Router", "detail": "Orchestrated MediLink Unified Engine pipeline", "status": "completed"},
