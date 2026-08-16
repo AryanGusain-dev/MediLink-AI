@@ -244,4 +244,21 @@ flowchart LR
 - **Agentic Tool Execution Log**: Displays live progress indicators (*Searching PubMed*, *Fetching Patient Records*, *Evaluating GNN Matrix*) and collapsible tool step accordions.
 - **Interactive Action Chips (CTAs)**: Auto-detects mentioned medications/allergies and renders action buttons (`Add "Amlodipine" to Profile`) that execute live `INSERT` operations into Supabase `extracted_medical_values`.
 
+---
+
+### F. Local-First Deterministic Parsing & Consolidated Batch Ingestion
+
+To minimize API token costs and eliminate rate-limit errors during multi-document uploads:
+1. **Local Deterministic Extractor (`LocalMedicalParser`)**: Parses Kreuzberg/PyPDF text locally ($0.00 API cost) using regex patterns to extract lab values (BP `146/92 mmHg`, `HbA1c 6.9%`, `Hemoglobin 10.8 g/dL`), prescriptions, conditions, and categories.
+2. **Consolidated Single-Request Batch Ingestion (`POST /documents/upload-batch`)**: When multiple files are uploaded at once, the backend extracts text locally and bundles all document contents into **1 single Gemini prompt payload**, saving 80–90% of API requests.
+
+---
+
+### G. Gemini-Directed UI Citation Tagging (`[CITED_DOCS: ...]`)
+
+- **Full Vault Context**: All user document summaries and IDs are provided to Gemini in `PATIENT MEDICAL DOCUMENTS IN VAULT:` context.
+- **LLM Citation Output**: Prompt instructs Gemini to append `[CITED_DOCS: doc_id_1, doc_id_2]` listing only the specific document IDs referenced in its synthesized answer.
+- **UI Citation Rendering**: The backend parses `[CITED_DOCS: ...]` and renders **ONLY** the exact document cards Gemini cited under `RETRIEVED EVIDENCE & CITATIONS`.
+
+
 
