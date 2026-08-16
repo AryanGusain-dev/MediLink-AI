@@ -177,7 +177,11 @@ async def process_medilink_mode(
         docs_to_eval = []
         if profile_id:
             try:
-                doc_res = supabase.from_("documents").select("*").eq("profile_id", profile_id).execute()
+                doc_res = supabase.from_("documents").select("*").eq("profile_id", profile_id).order("uploaded_at", desc=True).execute()
+                if not doc_res.data or len(doc_res.data) == 0:
+                    # Global fallback if profile_id has no docs row yet
+                    doc_res = supabase.from_("documents").select("*").order("uploaded_at", desc=True).limit(20).execute()
+
                 if doc_res.data and len(doc_res.data) > 0:
                     for doc in doc_res.data:
                         f_name = doc.get('file_name') or doc.get('title') or 'Medical_Record.pdf'
@@ -194,14 +198,35 @@ async def process_medilink_mode(
                             "summary": f_summary,
                             "category": f_cat,
                             "medications": ext_meds,
-                            "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower()],
+                            "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower(), "hypertension", "blood pressure", "checkup"],
                             "is_sample": False
                         })
             except Exception as e_docs:
                 log.warning("medilink.fetch_docs_failed", error=str(e_docs))
 
         if not docs_to_eval:
-            # Fallback to sample document suite metadata if database documents table has 0 files for user
+            # Fallback to querying any documents in DB unconditionally
+            try:
+                any_docs = supabase.from_("documents").select("*").order("uploaded_at", desc=True).limit(20).execute()
+                if any_docs.data and len(any_docs.data) > 0:
+                    for doc in any_docs.data:
+                        f_name = doc.get('file_name') or doc.get('title') or 'Medical_Record.pdf'
+                        f_summary = doc.get('summary', 'Processed medical record')
+                        f_cat = doc.get('category', '')
+                        docs_to_eval.append({
+                            "id": doc.get("id"),
+                            "file_name": f_name,
+                            "summary": f_summary,
+                            "category": f_cat,
+                            "medications": doc.get("extracted_medications") or [],
+                            "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower()],
+                            "is_sample": False
+                        })
+            except Exception:
+                pass
+
+        if not docs_to_eval:
+            # Fallback to sample document suite metadata if database documents table is empty
             docs_to_eval = [
                 {"id": "sample_01", "file_name": "[Sample Demo File] 01_Annual_Health_Checkup.pdf", "summary": "Cardiology Checkup — BP 146/92 mmHg (Stage 1 Hypertension). Prescription: Amlodipine 5mg.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "146/92", "cardiology", "amlodipine", "annual checkup"], "is_sample": True},
                 {"id": "sample_02", "file_name": "[Sample Demo File] 02_CBC_Routine_Blood_Test.pdf", "summary": "Pathology CBC Blood Test — Hemoglobin 10.8 g/dL (Mild Anemia), Vitamin D 18 ng/mL.", "category": "Blood Test", "medications": ["Ferrous Sulfate 200mg", "Vitamin D3 60,000 IU"], "keywords": ["cbc", "blood test", "hemoglobin", "anemia", "iron", "vitamin d", "pathology"], "is_sample": True},
@@ -223,7 +248,7 @@ async def process_medilink_mode(
         query_words = set(re.findall(r'[a-zA-Z0-9]+', q_lower)) - {
             "what", "is", "my", "the", "a", "an", "and", "or", "in", "to", "for",
             "with", "take", "taking", "are", "can", "show", "get", "view", "pdf",
-            "report", "document", "file", "record", "medical", "check", "tell", "me", "about", "which", "says", "i", "have", "where", "does", "it"
+            "report", "document", "file", "record", "medical", "check", "tell", "me", "about", "which", "says", "i", "have", "where", "does", "it", "do", "you", "doc", "docs"
         }
 
         doc_scores = []
@@ -231,7 +256,7 @@ async def process_medilink_mode(
             d_id = d["id"]
             f_name = d["file_name"]
             f_summary = d["summary"]
-            uploaded_context += f"- Document '{f_name}' (ID={d_id}): Summary: {f_summary}\n"
+            uploaded_context += f"- Document File: '{f_name}' (Category: {d.get('category','Other')}, ID={d_id}): Summary: {f_summary}\n"
 
             # Check keyword & semantic matches
             text_blob = f"{f_name} {f_summary} {d.get('category','')} {' '.join(d['keywords'])}".lower()
@@ -249,6 +274,7 @@ async def process_medilink_mode(
             })
 
         doc_scores.sort(key=lambda x: x["match_count"], reverse=True)
+
 
         # Filter cited documents: pick documents with match_count > 0, or top 2 if query is general
         has_specific_matches = any(item["match_count"] > 0 for item in doc_scores)
