@@ -182,20 +182,42 @@ When building or presenting **MediLink AI**, the following medical concepts and 
 
 ---
 
-## 7. 🤖 Autonomous Medical RAG & Multi-Agent Architecture
+## 7. 🤖 Multi-Layered Hybrid RAG Architecture & Ingestion Pipeline
 
-### A. RAG Vectorstore, Ingested Knowledge & Indexing Pipeline
+### A. 4-Tier Hybrid RAG Retrieval Engine
 
-| Subsystem | Technology Stack | Function & Implementation Details |
-| :--- | :--- | :--- |
-| **Vector Database** | **Qdrant Vector Store** | In-memory & disk-persisted vector database for medical literature retrieval (`backend/app/agents/data/qdrant_db/`). |
-| **Sparse + Dense Hybrid RAG** | **FastEmbed (Qdrant/bm25) + Dense Embeddings** | Dual retrieval pipeline combining BM25 keyword matching with dense vector similarity search. |
-| **Cross-Encoder Reranker** | **TinyBERT / Cross-Encoder** | Re-ranks top Qdrant candidate passages using cross-encoder relevance scoring before LLM synthesis. |
-| **Ingested Knowledge Base** | **PubMed & Clinical Guidelines** | Ingested peer-reviewed medical research PDFs including Brain Tumor MRI segmentation, COVID-19 Chest X-Ray guidelines, and ISIC Skin Lesion classification (`backend/app/agents/data/raw/`). |
+MediLink AI implements a **4-Tier Hybrid RAG Engine** that combines global live research, dynamic patient data, multi-modal neural matrices, and offline vector retrieval:
+
+| Tier | Engine / Knowledge Source | Scale & Knowledge Depth | Retrieval Technique & Implementation Details |
+| :--- | :--- | :--- | :--- |
+| **Tier 1 (Live Global)** | **NCBI PubMed Clinical Research** | **36,000,000+ Studies** | Live E-utilities REST API (`esearch` + `esummary`) fetching real-time peer-reviewed clinical trials, PMIDs, and journal articles. |
+| **Tier 2 (Patient Context)** | **Supabase Patient Health Vault** | **Dynamic Per-User Vault** | Real-time SQL retrieval of user-uploaded PDF medical records, extracted lab parameters, and prescription history. |
+| **Tier 3 (Multi-Modal ML)** | **DrugBank DDI GNN Matrix** | **147,748 Drug Pairs / 544 Compounds** | PyTorch neural network matrix space evaluating Structural, Target Binding, and Gene Ontology features ($9,582 \text{ dimensions}$). |
+| **Tier 4 (Offline Vectorstore)** | **Qdrant Hybrid Vector Store** | **FastEmbed BM25 + Dense Embeddings** | Offline Qdrant vector database (`medical_assistance_rag`) equipped with TinyBERT Cross-Encoder reranking for specialized medical literature. |
 
 ---
 
-### B. Live NCBI PubMed Search Integration
+### B. Automated Document Ingestion Pipeline
+
+The offline vector pipeline (`backend/app/agents/rag_agent/`) is fully automated for ingesting large medical textbooks, clinical guidelines, and research PDFs into Qdrant:
+
+```python
+from app.agents.config import Config
+from app.agents.rag_agent import MedicalRAG
+
+# Ingest any directory of medical PDFs or textbooks into Qdrant vectorstore
+rag = MedicalRAG(Config())
+rag.ingest_directory("app/agents/data/raw")
+```
+
+1. **Document Parsing**: Parses raw PDFs via `MedicalDocParser` (extracting text, tables, and figure captions).
+2. **Chunking & Preprocessing**: `ContentProcessor` splits text into 512-token chunks with 50-token semantic overlaps.
+3. **Dual Hybrid Indexing**: Generates **FastEmbed BM25 sparse vectors** for exact clinical keyword matching and **Dense Embeddings** for semantic similarity.
+4. **Cross-Encoder Reranking**: Re-ranks top Qdrant candidate passages using TinyBERT Cross-Encoder relevance scoring before LLM synthesis.
+
+---
+
+### C. Live NCBI PubMed Search Integration
 
 - **Live NCBI E-Utilities API**: Executes real-time REST HTTP queries to `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/` (`esearch` + `esummary`).
 - **Citation Metadata**: Extracts paper titles, lead authors, publication dates, journal sources, and direct PMID URLs (`https://pubmed.ncbi.nlm.nih.gov/{pmid}/`).
@@ -203,9 +225,9 @@ When building or presenting **MediLink AI**, the following medical concepts and 
 
 ---
 
-### C. Multi-Model Rate-Limit Fallback Strategy
+### D. Multi-Model Rate-Limit Fallback Strategy
 
-To prevent API quota outages (`429 RESOURCE_EXHAUSTED`), MediLink AI implements a multi-model fallback chain:
+To prevent API quota outages (`429 RESOURCE_EXHAUSTED`), MediLink AI implements an automatic fallback chain:
 
 ```mermaid
 flowchart LR
@@ -215,9 +237,10 @@ flowchart LR
 
 ---
 
-### D. Interactive Framer Motion Chatbot UI & Supabase Action Chips
+### E. Interactive Framer Motion Chatbot UI & Supabase Action Chips
 
 - **Framer Motion Animations**: Drawer slide-in animation (`x: "100%"` → `x: 0`) with tactile spring physics (`damping: 28, stiffness: 300`) and backdrop blur.
 - **Agentic Tool Execution Log**: Displays live progress indicators (*Searching PubMed*, *Fetching Patient Records*, *Evaluating GNN Matrix*) and collapsible tool step accordions.
 - **Interactive Action Chips (CTAs)**: Auto-detects mentioned medications/allergies and renders action buttons (`Add "Amlodipine" to Profile`) that execute live `INSERT` operations into Supabase `extracted_medical_values`.
+
 
