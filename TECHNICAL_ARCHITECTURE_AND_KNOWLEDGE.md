@@ -181,3 +181,43 @@ When building or presenting **MediLink AI**, the following medical concepts and 
 | **UHID System** | Universal Health Identifier (e.g., `ML-100231`) linking records across different hospitals. | Standardizes cross-institutional patient identification. |
 
 ---
+
+## 7. 🤖 Autonomous Medical RAG & Multi-Agent Architecture
+
+### A. RAG Vectorstore, Ingested Knowledge & Indexing Pipeline
+
+| Subsystem | Technology Stack | Function & Implementation Details |
+| :--- | :--- | :--- |
+| **Vector Database** | **Qdrant Vector Store** | In-memory & disk-persisted vector database for medical literature retrieval (`backend/app/agents/data/qdrant_db/`). |
+| **Sparse + Dense Hybrid RAG** | **FastEmbed (Qdrant/bm25) + Dense Embeddings** | Dual retrieval pipeline combining BM25 keyword matching with dense vector similarity search. |
+| **Cross-Encoder Reranker** | **TinyBERT / Cross-Encoder** | Re-ranks top Qdrant candidate passages using cross-encoder relevance scoring before LLM synthesis. |
+| **Ingested Knowledge Base** | **PubMed & Clinical Guidelines** | Ingested peer-reviewed medical research PDFs including Brain Tumor MRI segmentation, COVID-19 Chest X-Ray guidelines, and ISIC Skin Lesion classification (`backend/app/agents/data/raw/`). |
+
+---
+
+### B. Live NCBI PubMed Search Integration
+
+- **Live NCBI E-Utilities API**: Executes real-time REST HTTP queries to `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/` (`esearch` + `esummary`).
+- **Citation Metadata**: Extracts paper titles, lead authors, publication dates, journal sources, and direct PMID URLs (`https://pubmed.ncbi.nlm.nih.gov/{pmid}/`).
+- **Real-Time Synthesis**: Automatically triggers PubMed searches when queries ask about clinical guidelines, recent medical discoveries, or drug interaction mechanisms.
+
+---
+
+### C. Multi-Model Rate-Limit Fallback Strategy
+
+To prevent API quota outages (`429 RESOURCE_EXHAUSTED`), MediLink AI implements a multi-model fallback chain:
+
+```mermaid
+flowchart LR
+    A["Primary: Gemini 3.5 Flash"] -->|If 429 Quota Exceeded| B["Fallback 1: Gemini 3.1 Flash Lite"]
+    B -->|If 429 Quota Exceeded| C["Fallback 2: Gemini 2.5 Flash"]
+```
+
+---
+
+### D. Interactive Framer Motion Chatbot UI & Supabase Action Chips
+
+- **Framer Motion Animations**: Drawer slide-in animation (`x: "100%"` → `x: 0`) with tactile spring physics (`damping: 28, stiffness: 300`) and backdrop blur.
+- **Agentic Tool Execution Log**: Displays live progress indicators (*Searching PubMed*, *Fetching Patient Records*, *Evaluating GNN Matrix*) and collapsible tool step accordions.
+- **Interactive Action Chips (CTAs)**: Auto-detects mentioned medications/allergies and renders action buttons (`Add "Amlodipine" to Profile`) that execute live `INSERT` operations into Supabase `extracted_medical_values`.
+
