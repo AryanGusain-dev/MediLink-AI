@@ -157,127 +157,127 @@ async def process_medilink_mode(
             if p_res.data:
                 profile_id = p_res.data[0]["id"]
                 if p_res.data[0].get("ai_health_summary"):
-                    uploaded_context += f"PATIENT PROFILE HEALTH SUMMARY ({p_res.data[0].get('full_name', 'Patient')}):\n{p_res.data[0]['ai_health_summary']}\n\n"
-
+                    uploaded_context += f"PATIENT PROFILE HEALTH SUMMARY ({p_res.data[0].get('full_name', 'Patient')}):\n{p_res.data[0]['ai_health_summary']}\n\n"        # Extracted medical values & lab parameters (if profile_id available)
         if profile_id:
-            # Extracted medical values & lab parameters
-            res_vals = supabase.from_("extracted_medical_values").select("*").eq("profile_id", profile_id).limit(15).execute()
-            if res_vals.data:
-                uploaded_context += "USER UPLOADED LAB PARAMETERS & CLINICAL VALUES:\n"
-                for v in res_vals.data:
-                    param = v.get('parameter_name', 'Parameter')
-                    val = v.get('value', '')
-                    unit = v.get('unit', '')
-                    uploaded_context += f"- {param}: {val} {unit}\n"
-                    if any(kw in param.lower() for kw in ["medication", "drug", "prescription", "amlodipine", "metformin", "paracetamol", "ibuprofen", "aspirin"]):
-                        meds_list.append(param)
+            try:
+                res_vals = supabase.from_("extracted_medical_values").select("*").eq("profile_id", profile_id).limit(15).execute()
+                if res_vals.data:
+                    uploaded_context += "USER UPLOADED LAB PARAMETERS & CLINICAL VALUES:\n"
+                    for v in res_vals.data:
+                        param = v.get('parameter_name', 'Parameter')
+                        val = v.get('value', '')
+                        unit = v.get('unit', '')
+                        uploaded_context += f"- {param}: {val} {unit}\n"
+                        if any(kw in param.lower() for kw in ["medication", "drug", "prescription", "amlodipine", "metformin", "paracetamol", "ibuprofen", "aspirin"]):
+                            meds_list.append(param)
+            except Exception as e_vals:
+                log.warning("medilink.fetch_values_failed", error=str(e_vals))
 
-            # Check documents table for uploaded files & extracted meds
-            doc_res = supabase.from_("documents").select("*").eq("profile_id", profile_id).execute()
-            docs_to_eval = []
+        # Check documents table for uploaded files & extracted meds
+        docs_to_eval = []
+        if profile_id:
+            try:
+                doc_res = supabase.from_("documents").select("*").eq("profile_id", profile_id).execute()
+                if doc_res.data and len(doc_res.data) > 0:
+                    for doc in doc_res.data:
+                        f_name = doc.get('file_name') or doc.get('title') or 'Medical_Record.pdf'
+                        f_summary = doc.get('summary', 'Processed medical record')
+                        f_cat = doc.get('category', '')
+                        ext_meds = doc.get("extracted_medications") or []
+                        if isinstance(ext_meds, list):
+                            meds_list.extend(ext_meds)
+                        elif isinstance(ext_meds, str):
+                            meds_list.append(ext_meds)
+                        docs_to_eval.append({
+                            "id": doc.get("id"),
+                            "file_name": f_name,
+                            "summary": f_summary,
+                            "category": f_cat,
+                            "medications": ext_meds,
+                            "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower()],
+                            "is_sample": False
+                        })
+            except Exception as e_docs:
+                log.warning("medilink.fetch_docs_failed", error=str(e_docs))
 
-            if doc_res.data and len(doc_res.data) > 0:
-                is_sample = False
-                for doc in doc_res.data:
-                    f_name = doc.get('file_name') or doc.get('title') or 'Medical_Record.pdf'
-                    f_summary = doc.get('summary', 'Processed medical record')
-                    f_cat = doc.get('category', '')
-                    ext_meds = doc.get("extracted_medications") or []
-                    if isinstance(ext_meds, list):
-                        meds_list.extend(ext_meds)
-                    elif isinstance(ext_meds, str):
-                        meds_list.append(ext_meds)
-                    docs_to_eval.append({
-                        "id": doc.get("id"),
-                        "file_name": f_name,
-                        "summary": f_summary,
-                        "category": f_cat,
-                        "medications": ext_meds,
-                        "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower()],
-                        "is_sample": False
-                    })
-            else:
-                # Fallback to sample document suite metadata if database documents table is empty
-                is_sample = True
-                docs_to_eval = [
-                    {"id": "sample_01", "file_name": "[Sample Demo File] 01_Annual_Health_Checkup.pdf", "summary": "Cardiology Checkup — BP 146/92 mmHg (Stage 1 Hypertension). Prescription: Amlodipine 5mg.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "146/92", "cardiology", "amlodipine", "annual checkup"], "is_sample": True},
-                    {"id": "sample_02", "file_name": "[Sample Demo File] 02_CBC_Routine_Blood_Test.pdf", "summary": "Pathology CBC Blood Test — Hemoglobin 10.8 g/dL (Mild Anemia), Vitamin D 18 ng/mL.", "category": "Blood Test", "medications": ["Ferrous Sulfate 200mg", "Vitamin D3 60,000 IU"], "keywords": ["cbc", "blood test", "hemoglobin", "anemia", "iron", "vitamin d", "pathology"], "is_sample": True},
-                    {"id": "sample_03", "file_name": "[Sample Demo File] 03_Hypertension_Followup.pdf", "summary": "Cardiology Consultation — Hypertension follow-up. Prescription: Amlodipine 5mg once daily.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "amlodipine", "cardiology", "followup"], "is_sample": True},
-                    {"id": "sample_04", "file_name": "[Sample Demo File] 04_ECG_Report.pdf", "summary": "Cardiology 12-Lead ECG Report — Sinus Rhythm & Mild LVH findings.", "category": "ECG", "medications": [], "keywords": ["ecg", "heart", "sinus rhythm", "lvh", "cardiology"], "is_sample": True},
-                    {"id": "sample_05", "file_name": "[Sample Demo File] 05_Diabetes_Screening.pdf", "summary": "Endocrinology Screening — HbA1c 6.9% (Type 2 Diabetes Onset). Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "screening"], "is_sample": True},
-                    {"id": "sample_06", "file_name": "[Sample Demo File] 06_Diabetes_Followup.pdf", "summary": "Endocrinology Followup — HbA1c improved to 6.2%. Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "followup"], "is_sample": True},
-                    {"id": "sample_07", "file_name": "[Sample Demo File] 07_Orthopedic_Consultation.pdf", "summary": "Orthopedics Consultation — Lumbar back pain evaluation.", "category": "Orthopedics", "medications": [], "keywords": ["orthopedic", "back pain", "lumbar", "spine", "pain"], "is_sample": True},
-                    {"id": "sample_08", "file_name": "[Sample Demo File] 08_Orthopedic_Followup_Prescription.pdf", "summary": "Orthopedics Followup — Prescription: Ibuprofen 400mg, Pantoprazole 40mg.", "category": "Orthopedics", "medications": ["Ibuprofen 400mg", "Pantoprazole 40mg"], "keywords": ["orthopedic", "ibuprofen", "pantoprazole", "prescription", "pain relief"], "is_sample": True},
-                    {"id": "sample_09", "file_name": "[Sample Demo File] 09_Pain_Relief_Safe_Followup.pdf", "summary": "Cardiology Followup — Safe analgesic prescription: Paracetamol 500mg.", "category": "Cardiology", "medications": ["Paracetamol 500mg"], "keywords": ["paracetamol", "acetaminophen", "pain relief", "safe analgesic"], "is_sample": True},
-                    {"id": "sample_10", "file_name": "[Sample Demo File] 10_Multivitamin_Safe_Supplement.pdf", "summary": "Endocrinology Followup — Vitamin supplement prescription: Vitamin C 500mg.", "category": "Endocrinology", "medications": ["Vitamin C 500mg"], "keywords": ["vitamin", "vitamin c", "multivitamin", "supplement"], "is_sample": True}
-                ]
-                for d in docs_to_eval:
-                    if d.get("medications"):
-                        meds_list.extend(d["medications"])
-
-            uploaded_context += "\nPATIENT MEDICAL DOCUMENTS IN VAULT:\n"
-            q_lower = query.lower()
-            query_words = set(re.findall(r'[a-zA-Z0-9]+', q_lower)) - {
-                "what", "is", "my", "the", "a", "an", "and", "or", "in", "to", "for",
-                "with", "take", "taking", "are", "can", "show", "get", "view", "pdf",
-                "report", "document", "file", "record", "medical", "check", "tell", "me", "about", "which", "says", "i", "have"
-            }
-
-            doc_scores = []
+        if not docs_to_eval:
+            # Fallback to sample document suite metadata if database documents table has 0 files for user
+            docs_to_eval = [
+                {"id": "sample_01", "file_name": "[Sample Demo File] 01_Annual_Health_Checkup.pdf", "summary": "Cardiology Checkup — BP 146/92 mmHg (Stage 1 Hypertension). Prescription: Amlodipine 5mg.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "146/92", "cardiology", "amlodipine", "annual checkup"], "is_sample": True},
+                {"id": "sample_02", "file_name": "[Sample Demo File] 02_CBC_Routine_Blood_Test.pdf", "summary": "Pathology CBC Blood Test — Hemoglobin 10.8 g/dL (Mild Anemia), Vitamin D 18 ng/mL.", "category": "Blood Test", "medications": ["Ferrous Sulfate 200mg", "Vitamin D3 60,000 IU"], "keywords": ["cbc", "blood test", "hemoglobin", "anemia", "iron", "vitamin d", "pathology"], "is_sample": True},
+                {"id": "sample_03", "file_name": "[Sample Demo File] 03_Hypertension_Followup.pdf", "summary": "Cardiology Consultation — Hypertension follow-up. Prescription: Amlodipine 5mg once daily.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "amlodipine", "cardiology", "followup"], "is_sample": True},
+                {"id": "sample_04", "file_name": "[Sample Demo File] 04_ECG_Report.pdf", "summary": "Cardiology 12-Lead ECG Report — Sinus Rhythm & Mild LVH findings.", "category": "ECG", "medications": [], "keywords": ["ecg", "heart", "sinus rhythm", "lvh", "cardiology"], "is_sample": True},
+                {"id": "sample_05", "file_name": "[Sample Demo File] 05_Diabetes_Screening.pdf", "summary": "Endocrinology Screening — HbA1c 6.9% (Type 2 Diabetes Onset). Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "screening"], "is_sample": True},
+                {"id": "sample_06", "file_name": "[Sample Demo File] 06_Diabetes_Followup.pdf", "summary": "Endocrinology Followup — HbA1c improved to 6.2%. Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "followup"], "is_sample": True},
+                {"id": "sample_07", "file_name": "[Sample Demo File] 07_Orthopedic_Consultation.pdf", "summary": "Orthopedics Consultation — Lumbar back pain evaluation.", "category": "Orthopedics", "medications": [], "keywords": ["orthopedic", "back pain", "lumbar", "spine", "pain"], "is_sample": True},
+                {"id": "sample_08", "file_name": "[Sample Demo File] 08_Orthopedic_Followup_Prescription.pdf", "summary": "Orthopedics Followup — Prescription: Ibuprofen 400mg, Pantoprazole 40mg.", "category": "Orthopedics", "medications": ["Ibuprofen 400mg", "Pantoprazole 40mg"], "keywords": ["orthopedic", "ibuprofen", "pantoprazole", "prescription", "pain relief"], "is_sample": True},
+                {"id": "sample_09", "file_name": "[Sample Demo File] 09_Pain_Relief_Safe_Followup.pdf", "summary": "Cardiology Followup — Safe analgesic prescription: Paracetamol 500mg.", "category": "Cardiology", "medications": ["Paracetamol 500mg"], "keywords": ["paracetamol", "acetaminophen", "pain relief", "safe analgesic"], "is_sample": True},
+                {"id": "sample_10", "file_name": "[Sample Demo File] 10_Multivitamin_Safe_Supplement.pdf", "summary": "Endocrinology Followup — Vitamin supplement prescription: Vitamin C 500mg.", "category": "Endocrinology", "medications": ["Vitamin C 500mg"], "keywords": ["vitamin", "vitamin c", "multivitamin", "supplement"], "is_sample": True}
+            ]
             for d in docs_to_eval:
-                d_id = d["id"]
-                f_name = d["file_name"]
-                f_summary = d["summary"]
-                uploaded_context += f"- Document '{f_name}' (ID={d_id}): Summary: {f_summary}\n"
+                if d.get("medications"):
+                    meds_list.extend(d["medications"])
 
-                # Check keyword & semantic matches
-                text_blob = f"{f_name} {f_summary} {d.get('category','')} {' '.join(d['keywords'])}".lower()
-                
-                # Direct topic matches (e.g. "hypertension" -> "03_Hypertension_Followup.pdf")
-                match_count = sum(1 for kw in d["keywords"] if kw in q_lower)
-                match_count += sum(1 for word in query_words if word in text_blob)
+        uploaded_context += "\nPATIENT MEDICAL DOCUMENTS IN VAULT:\n"
+        q_lower = query.lower()
+        query_words = set(re.findall(r'[a-zA-Z0-9]+', q_lower)) - {
+            "what", "is", "my", "the", "a", "an", "and", "or", "in", "to", "for",
+            "with", "take", "taking", "are", "can", "show", "get", "view", "pdf",
+            "report", "document", "file", "record", "medical", "check", "tell", "me", "about", "which", "says", "i", "have", "where", "does", "it"
+        }
 
-                doc_scores.append({
-                    "d_id": d_id,
-                    "f_name": f_name,
-                    "f_summary": f_summary,
-                    "match_count": match_count,
-                    "is_sample": d.get("is_sample", False)
-                })
+        doc_scores = []
+        for d in docs_to_eval:
+            d_id = d["id"]
+            f_name = d["file_name"]
+            f_summary = d["summary"]
+            uploaded_context += f"- Document '{f_name}' (ID={d_id}): Summary: {f_summary}\n"
 
-            doc_scores.sort(key=lambda x: x["match_count"], reverse=True)
+            # Check keyword & semantic matches
+            text_blob = f"{f_name} {f_summary} {d.get('category','')} {' '.join(d['keywords'])}".lower()
+            
+            # Direct topic matches (e.g. "hypertension" -> "03_Hypertension_Followup.pdf")
+            match_count = sum(1 for kw in d["keywords"] if kw in q_lower)
+            match_count += sum(1 for word in query_words if word in text_blob)
 
-            # Filter cited documents: pick documents with match_count > 0, or top 2 if query is general
-            has_specific_matches = any(item["match_count"] > 0 for item in doc_scores)
-            cited_docs = [item for item in doc_scores if item["match_count"] > 0] if has_specific_matches else doc_scores[:2]
+            doc_scores.append({
+                "d_id": d_id,
+                "f_name": f_name,
+                "f_summary": f_summary,
+                "match_count": match_count,
+                "is_sample": d.get("is_sample", False)
+            })
 
-            for item in cited_docs:
-                d_id = item["d_id"]
-                f_name = item["f_name"]
-                f_summary = item["f_summary"]
-                is_samp = item["is_sample"]
-                doc_url = f"http://localhost:8000/documents/{d_id}/download" if d_id and not str(d_id).startswith("sample_") else "/dashboard/documents"
+        doc_scores.sort(key=lambda x: x["match_count"], reverse=True)
 
-                sources.append({
-                    "title": f"Patient PDF: {f_name}",
-                    "source": "Sample Demo Record (example_medical_docs/)" if is_samp else f"Supabase Vault (ID: {str(d_id)[:10]})",
-                    "snippet": f"Summary: {f_summary}",
-                    "url": doc_url,
-                    "relevance": 0.99 if item["match_count"] > 0 else 0.85,
-                    "type": "document",
-                })
+        # Filter cited documents: pick documents with match_count > 0, or top 2 if query is general
+        has_specific_matches = any(item["match_count"] > 0 for item in doc_scores)
+        cited_docs = [item for item in doc_scores if item["match_count"] > 0] if has_specific_matches else doc_scores[:2]
 
+        for item in cited_docs:
+            d_id = item["d_id"]
+            f_name = item["f_name"]
+            f_summary = item["f_summary"]
+            is_samp = item["is_sample"]
+            doc_url = f"http://localhost:8000/documents/{d_id}/download" if d_id and not str(d_id).startswith("sample_") else "/dashboard/documents"
 
+            sources.append({
+                "title": f"Patient PDF: {f_name}",
+                "source": "Sample Demo Record (example_medical_docs/)" if is_samp else f"Supabase Vault (ID: {str(d_id)[:10]})",
+                "snippet": f"Summary: {f_summary}",
+                "url": doc_url,
+                "relevance": 0.99 if item["match_count"] > 0 else 0.85,
+                "type": "document",
+            })
 
-
-
-            # Deduplicate meds list
-            meds_list = list(dict.fromkeys([m.strip() for m in meds_list if m and m.strip()]))
-            if not meds_list:
-                meds_list = ["Amlodipine", "Metformin"]
+        # Deduplicate meds list
+        meds_list = list(dict.fromkeys([m.strip() for m in meds_list if m and m.strip()]))
+        if not meds_list:
+            meds_list = ["Amlodipine", "Metformin"]
     except Exception as e:
         log.warning("medilink.fetch_records_failed", error=str(e))
         meds_list = ["Amlodipine", "Metformin"]
+
 
     # 2. Query DDI ML Model & Textual XAI Explanation Engine
     ddi_context = ""
