@@ -12,7 +12,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Up
 from supabase import Client
 
 from app.dependencies import get_supabase_client
-from app.models.document import DocumentStatusResponse, UploadResponse
+from app.models.document import DocumentStatusResponse, UploadResponse, ProcessRequest
+
 from app.pipeline.extraction import extract_document
 from app.pipeline.ingestion import ingest_document
 from app.pipeline.llm_reasoning import run_llm_reasoning

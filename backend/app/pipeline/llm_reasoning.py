@@ -18,7 +18,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from app.models.analysis import AnalysisResult
+from app.models.analysis import AnalysisResult, Condition, Medication, LabResult, Finding
+
 from app.models.extraction import CleanDocument
 from app.services.gemini_service import build_prompt, call_gemini
 
