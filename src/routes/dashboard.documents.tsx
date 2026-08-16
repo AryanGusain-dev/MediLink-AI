@@ -108,7 +108,8 @@ function DocumentsPage() {
               email: user.email || "",
             })
             .select("id")
-            .single();
+            .maybeSingle();
+
 
           pId = newProfile?.id || null;
         }

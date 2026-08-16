@@ -741,7 +741,8 @@ function AIPage() {
           .from("profiles")
           .select("*")
           .eq("auth_user_id", user.id)
-          .single();
+          .maybeSingle();
+
 
         if (pData) {
           setProfile(pData);

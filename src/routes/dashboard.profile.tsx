@@ -88,9 +88,10 @@ function ProfilePage() {
           .from("profiles")
           .select("*")
           .eq("auth_user_id", user.id)
-          .single();
+          .maybeSingle();
 
-        if (pErr) throw pErr;
+        if (pErr) console.warn("profile fetch error:", pErr);
+
 
         if (pData) {
           setProfile(pData);

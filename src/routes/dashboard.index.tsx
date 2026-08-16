@@ -229,9 +229,10 @@ function DashboardOverview() {
           .from("profiles")
           .select("*")
           .eq("auth_user_id", user.id)
-          .single();
+          .maybeSingle();
 
-        if (pErr) throw pErr;
+        if (pErr) console.warn("fetchDashboardData.profile error:", pErr);
+
 
         if (pData) {
           setProfile(pData);
@@ -285,11 +286,12 @@ function DashboardOverview() {
             .from("settings")
             .select("*")
             .eq("profile_id", pData.id)
-            .single();
+            .maybeSingle();
           if (settingsData) {
             setSettings(settingsData);
             setCachedData("settings", settingsData);
           }
+
 
           // 7. Fetch emergency contacts
           const { data: ecData } = await supabase

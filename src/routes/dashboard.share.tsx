@@ -99,7 +99,8 @@ function SharePage() {
   useEffect(() => {
     async function loadData() {
       if (!user) return;
-      const { data: pData } = await supabase.from("profiles").select("id").eq("auth_user_id", user.id).single();
+      const { data: pData } = await supabase.from("profiles").select("id").eq("auth_user_id", user.id).maybeSingle();
+
       if (pData) {
         setProfileId(pData.id);
         const [profRes, linkRes] = await Promise.all([
