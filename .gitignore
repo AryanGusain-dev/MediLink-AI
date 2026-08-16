@@ -81,3 +81,12 @@ env/
 
 # DDI Specific Exclusions
 drug-to-drug-interaction-using-XAI/predict_ddi_xai/*.png
+
+# AI Model Checkpoints & Heavy Binary Files (>50MB)
+*.pth
+*.pth.tar
+*.pt
+*.bin
+*.onnx
+backend/app/agents/data/
+backend/app/agents/uploads/
