@@ -177,6 +177,7 @@ async def process_medilink_mode(
             docs_to_eval = []
 
             if doc_res.data and len(doc_res.data) > 0:
+                is_sample = False
                 for doc in doc_res.data:
                     f_name = doc.get('file_name') or doc.get('title') or 'Medical_Record.pdf'
                     f_summary = doc.get('summary', 'Processed medical record')
@@ -192,21 +193,23 @@ async def process_medilink_mode(
                         "summary": f_summary,
                         "category": f_cat,
                         "medications": ext_meds,
-                        "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower()]
+                        "keywords": [f_name.lower(), f_summary.lower(), f_cat.lower()],
+                        "is_sample": False
                     })
             else:
                 # Fallback to sample document suite metadata if database documents table is empty
+                is_sample = True
                 docs_to_eval = [
-                    {"id": "sample_01", "file_name": "01_Annual_Health_Checkup.pdf", "summary": "Cardiology Checkup — BP 146/92 mmHg (Stage 1 Hypertension). Prescription: Amlodipine 5mg.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "146/92", "cardiology", "amlodipine", "annual checkup"]},
-                    {"id": "sample_02", "file_name": "02_CBC_Routine_Blood_Test.pdf", "summary": "Pathology CBC Blood Test — Hemoglobin 10.8 g/dL (Mild Anemia), Vitamin D 18 ng/mL.", "category": "Blood Test", "medications": ["Ferrous Sulfate 200mg", "Vitamin D3 60,000 IU"], "keywords": ["cbc", "blood test", "hemoglobin", "anemia", "iron", "vitamin d", "pathology"]},
-                    {"id": "sample_03", "file_name": "03_Hypertension_Followup.pdf", "summary": "Cardiology Consultation — Hypertension follow-up. Prescription: Amlodipine 5mg once daily.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "amlodipine", "cardiology", "followup"]},
-                    {"id": "sample_04", "file_name": "04_ECG_Report.pdf", "summary": "Cardiology 12-Lead ECG Report — Sinus Rhythm & Mild LVH findings.", "category": "ECG", "medications": [], "keywords": ["ecg", "heart", "sinus rhythm", "lvh", "cardiology"]},
-                    {"id": "sample_05", "file_name": "05_Diabetes_Screening.pdf", "summary": "Endocrinology Screening — HbA1c 6.9% (Type 2 Diabetes Onset). Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "screening"]},
-                    {"id": "sample_06", "file_name": "06_Diabetes_Followup.pdf", "summary": "Endocrinology Followup — HbA1c improved to 6.2%. Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "followup"]},
-                    {"id": "sample_07", "file_name": "07_Orthopedic_Consultation.pdf", "summary": "Orthopedics Consultation — Lumbar back pain evaluation.", "category": "Orthopedics", "medications": [], "keywords": ["orthopedic", "back pain", "lumbar", "spine", "pain"]},
-                    {"id": "sample_08", "file_name": "08_Orthopedic_Followup_Prescription.pdf", "summary": "Orthopedics Followup — Prescription: Ibuprofen 400mg, Pantoprazole 40mg.", "category": "Orthopedics", "medications": ["Ibuprofen 400mg", "Pantoprazole 40mg"], "keywords": ["orthopedic", "ibuprofen", "pantoprazole", "prescription", "pain relief"]},
-                    {"id": "sample_09", "file_name": "09_Pain_Relief_Safe_Followup.pdf", "summary": "Cardiology Followup — Safe analgesic prescription: Paracetamol 500mg.", "category": "Cardiology", "medications": ["Paracetamol 500mg"], "keywords": ["paracetamol", "acetaminophen", "pain relief", "safe analgesic"]},
-                    {"id": "sample_10", "file_name": "10_Multivitamin_Safe_Supplement.pdf", "summary": "Endocrinology Followup — Vitamin supplement prescription: Vitamin C 500mg.", "category": "Endocrinology", "medications": ["Vitamin C 500mg"], "keywords": ["vitamin", "vitamin c", "multivitamin", "supplement"]}
+                    {"id": "sample_01", "file_name": "[Sample Demo File] 01_Annual_Health_Checkup.pdf", "summary": "Cardiology Checkup — BP 146/92 mmHg (Stage 1 Hypertension). Prescription: Amlodipine 5mg.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "146/92", "cardiology", "amlodipine", "annual checkup"], "is_sample": True},
+                    {"id": "sample_02", "file_name": "[Sample Demo File] 02_CBC_Routine_Blood_Test.pdf", "summary": "Pathology CBC Blood Test — Hemoglobin 10.8 g/dL (Mild Anemia), Vitamin D 18 ng/mL.", "category": "Blood Test", "medications": ["Ferrous Sulfate 200mg", "Vitamin D3 60,000 IU"], "keywords": ["cbc", "blood test", "hemoglobin", "anemia", "iron", "vitamin d", "pathology"], "is_sample": True},
+                    {"id": "sample_03", "file_name": "[Sample Demo File] 03_Hypertension_Followup.pdf", "summary": "Cardiology Consultation — Hypertension follow-up. Prescription: Amlodipine 5mg once daily.", "category": "Cardiology", "medications": ["Amlodipine 5mg"], "keywords": ["hypertension", "hypertensive", "blood pressure", "bp", "amlodipine", "cardiology", "followup"], "is_sample": True},
+                    {"id": "sample_04", "file_name": "[Sample Demo File] 04_ECG_Report.pdf", "summary": "Cardiology 12-Lead ECG Report — Sinus Rhythm & Mild LVH findings.", "category": "ECG", "medications": [], "keywords": ["ecg", "heart", "sinus rhythm", "lvh", "cardiology"], "is_sample": True},
+                    {"id": "sample_05", "file_name": "[Sample Demo File] 05_Diabetes_Screening.pdf", "summary": "Endocrinology Screening — HbA1c 6.9% (Type 2 Diabetes Onset). Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "screening"], "is_sample": True},
+                    {"id": "sample_06", "file_name": "[Sample Demo File] 06_Diabetes_Followup.pdf", "summary": "Endocrinology Followup — HbA1c improved to 6.2%. Prescription: Metformin 500mg.", "category": "Endocrinology", "medications": ["Metformin 500mg"], "keywords": ["diabetes", "diabetic", "hba1c", "glucose", "metformin", "endocrinology", "followup"], "is_sample": True},
+                    {"id": "sample_07", "file_name": "[Sample Demo File] 07_Orthopedic_Consultation.pdf", "summary": "Orthopedics Consultation — Lumbar back pain evaluation.", "category": "Orthopedics", "medications": [], "keywords": ["orthopedic", "back pain", "lumbar", "spine", "pain"], "is_sample": True},
+                    {"id": "sample_08", "file_name": "[Sample Demo File] 08_Orthopedic_Followup_Prescription.pdf", "summary": "Orthopedics Followup — Prescription: Ibuprofen 400mg, Pantoprazole 40mg.", "category": "Orthopedics", "medications": ["Ibuprofen 400mg", "Pantoprazole 40mg"], "keywords": ["orthopedic", "ibuprofen", "pantoprazole", "prescription", "pain relief"], "is_sample": True},
+                    {"id": "sample_09", "file_name": "[Sample Demo File] 09_Pain_Relief_Safe_Followup.pdf", "summary": "Cardiology Followup — Safe analgesic prescription: Paracetamol 500mg.", "category": "Cardiology", "medications": ["Paracetamol 500mg"], "keywords": ["paracetamol", "acetaminophen", "pain relief", "safe analgesic"], "is_sample": True},
+                    {"id": "sample_10", "file_name": "[Sample Demo File] 10_Multivitamin_Safe_Supplement.pdf", "summary": "Endocrinology Followup — Vitamin supplement prescription: Vitamin C 500mg.", "category": "Endocrinology", "medications": ["Vitamin C 500mg"], "keywords": ["vitamin", "vitamin c", "multivitamin", "supplement"], "is_sample": True}
                 ]
                 for d in docs_to_eval:
                     if d.get("medications"):
@@ -239,6 +242,7 @@ async def process_medilink_mode(
                     "f_name": f_name,
                     "f_summary": f_summary,
                     "match_count": match_count,
+                    "is_sample": d.get("is_sample", False)
                 })
 
             doc_scores.sort(key=lambda x: x["match_count"], reverse=True)
@@ -251,16 +255,18 @@ async def process_medilink_mode(
                 d_id = item["d_id"]
                 f_name = item["f_name"]
                 f_summary = item["f_summary"]
+                is_samp = item["is_sample"]
                 doc_url = f"http://localhost:8000/documents/{d_id}/download" if d_id and not str(d_id).startswith("sample_") else "/dashboard/documents"
 
                 sources.append({
                     "title": f"Patient PDF: {f_name}",
-                    "source": f"Patient Health Vault (ID: {str(d_id)[:10]})",
+                    "source": "Sample Demo Record (example_medical_docs/)" if is_samp else f"Supabase Vault (ID: {str(d_id)[:10]})",
                     "snippet": f"Summary: {f_summary}",
                     "url": doc_url,
                     "relevance": 0.99 if item["match_count"] > 0 else 0.85,
                     "type": "document",
                 })
+
 
 
 
