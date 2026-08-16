@@ -177,16 +177,20 @@ async def process_medilink_mode(
             if doc_res.data:
                 uploaded_context += "\nUPLOADED MEDICAL DOCUMENTS:\n"
                 for doc in doc_res.data:
-                    f_name = doc.get('file_name', 'Medical_Record.pdf')
+                    d_id = doc.get("id")
+                    f_name = doc.get('file_name') or doc.get('title') or 'Medical_Record.pdf'
                     f_status = doc.get('status', 'COMPLETED')
                     f_summary = doc.get('summary', 'Processed medical record')
-                    uploaded_context += f"- Document '{f_name}': Status={f_status}. Summary: {f_summary}\n"
+                    uploaded_context += f"- Document '{f_name}' (ID={d_id}): Status={f_status}. Summary: {f_summary}\n"
                     
+                    # Direct link to stream this specific document PDF inline
+                    doc_url = f"http://localhost:8000/documents/{d_id}/download" if d_id else "/dashboard/documents"
+
                     sources.append({
                         "title": f"Patient PDF: {f_name}",
-                        "source": f"Supabase Health Vault (Status: {f_status})",
+                        "source": f"Supabase Vault (ID: {str(d_id)[:8]}...)",
                         "snippet": f"Summary: {f_summary}",
-                        "url": "/dashboard/documents",
+                        "url": doc_url,
                         "relevance": 0.99,
                         "type": "document",
                     })
@@ -196,6 +200,7 @@ async def process_medilink_mode(
                             meds_list.extend(doc["extracted_medications"])
                         elif isinstance(doc["extracted_medications"], str):
                             meds_list.append(doc["extracted_medications"])
+
 
             # Deduplicate meds list
             meds_list = list(dict.fromkeys([m.strip() for m in meds_list if m and m.strip()]))

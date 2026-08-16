@@ -783,7 +783,18 @@ export function RAGSidebar() {
 
                                 {src.url && (
                                   <div className="pt-0.5">
-                                    {isInternal ? (
+                                    {src.type === "document" ? (
+                                      <a
+                                        href={src.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-bold"
+                                      >
+                                        <FileText className="w-3 h-3" />
+                                        <span>Open & View Specific PDF</span>
+                                        <ExternalLink className="w-3 h-3" />
+                                      </a>
+                                    ) : isInternal ? (
                                       <button
                                         onClick={() => {
                                           closeRAG();
@@ -791,11 +802,7 @@ export function RAGSidebar() {
                                         }}
                                         className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-bold"
                                       >
-                                        <span>
-                                          {src.type === "document"
-                                            ? "View Patient Document"
-                                            : "View DDI & XAI Model Details"}
-                                        </span>
+                                        <span>View DDI & XAI Model Details</span>
                                         <ChevronRight className="w-3 h-3" />
                                       </button>
                                     ) : (
