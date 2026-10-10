@@ -8,7 +8,7 @@ This document provides a comprehensive technical breakdown of the MediLink AI pl
 
 **MediLink AI** is an advanced, privacy-first healthcare application designed for secure health record management, document OCR extraction, patient passport auto-population, and automated **Drug-Drug Interaction (DDI) safety verification**. 
 
-The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini 2.0 Flash LLM**, and a **Multi-Modal PyTorch Deep Neural Network** trained on biological similarity matrices (Structural, Target, and Gene Ontology features) paired with a **Lightweight Saliency-based Explainable AI (XAI) Engine**.
+The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini 2.0 Flash LLM**, and the **MediLink-CAMF (Cross-Attention Multi-Modal Fusion)** deep neural network trained on multi-modal biological similarity profiles (Structural, Target, and Gene Ontology features) paired with a **Lightweight Saliency-based Explainable AI (XAI) Engine**.
 
 ---
 
@@ -19,7 +19,7 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 | **Sample Medical Documents** | 10-Document Suite (`example_medical_docs/`) | Sample medical records covering Cardiology, Pathology, Endocrinology, and Orthopedics to try OCR, passport extraction, and DDI safety without real patient data. |
 | **Master Vault PDF** | Combined Vault (`00_Combined_Medical_Record_Vault.pdf`) | 10-page master PDF consolidating sample history across multiple specialists into a single uploadable document. |
 | **PDF Generation Engine** | Python Script (`scripts/create_pdf_docs.py`) | ReportLab-based automated script generating structured sample medical PDFs with headers, vitals tables, lab metrics, and prescriptions. |
-| **DDI Deep Learning Engine** | Sub-Module Integration (`drug-to-drug-interaction-using-XAI/`) | Multi-modal neural network for predicting 1,308 distinct drug interaction types across 544 canonical drugs. |
+| **DDI Deep Learning Engine** | MediLink-CAMF Sub-Module (`drug-to-drug-interaction-using-XAI/`) | Multi-modal neural network with cross-attention fusion and latent orthogonality regularization predicting 1,308 distinct drug interaction types across 544 canonical clinical drugs. |
 | **Textual XAI Engine** | Saliency & Gradient Attribution (`xai_service.py`) | Lightweight, low-RAM gradient attribution module ($G_i \times x_i$) generating human-readable explanations of AI predictions on GTX 1650/8GB setups. |
 | **DDI Safety Tagging Matrix** | Rule & ML Dual Engine | Hybrid verification system yielding `SAFE` (Green), `HIGH RISK` (Red DB Library Hit), `MODERATE RISK` (Yellow ML Model), or `KNOWLEDGE GAP` (Orange Warning). |
 | **5-Layer Document Pipeline** | Async FastAPI Ingestion (`backend/app/`) | Seamless ingestion, text parsing, OCR preprocessing, Gemini LLM structured extraction, and Supabase database persistence. |
@@ -31,11 +31,13 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 
 | Module Name | Model Architecture / Methodology | Input & Dimensionality | Output & Accuracy / Metrics |
 | :--- | :--- | :--- | :--- |
-| **Multi-Modal DDI Predictor** | 3 Parallel Autoencoders + Deep Neural Network (DNN) Classifier | **9,582 features** per drug pair ($3,194 \text{ Structural} + 3,194 \text{ Target} + 3,194 \text{ Gene Ontology}$) | Multi-label binary classification across **1,308 interaction types**.<br>**Accuracy: 96.49%** \| **Micro Recall: 96.96%** \| **Micro Precision: 96.67%** |
-| **Structural Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 SMILES Chemical Fingerprint similarity scores | Compressed structural latent representation vector ($200$ dimensions) |
-| **Target Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 Protein/Receptor target interaction similarity scores | Compressed target binding latent vector ($200$ dimensions) |
-| **GO Autoencoder** | Deep Autoencoder for dimensionality reduction | 3,194 Gene Ontology cellular pathway similarity scores | Compressed biological pathway latent vector ($200$ dimensions) |
-| **Offline Kernel SHAP Module** | Kernel SHAP (Shapley Additive Explanations) (`predict_ddi_xai/`) | Sampled background pairs (`shap_train_final.npz`) & test pairs | Global feature importance beeswarm plots & 48 pre-rendered waterfall PDF charts (`48_waterfall_plots.pdf`) |
+| **MediLink-BioFusion Multi-Modal Predictor** | 3 Bio-Projectors + 8-Head Cross-Modal Attention Transformer (CMAT) + Bilinear Modality Gating (BMIG) + Pyramidal Residual Head | **9,582 features** per drug pair ($3,194 \text{ Structural} + 3,194 \text{ Target} + 3,194 \text{ Gene Ontology}$ relative to 1,597 reference drugs) | **94.06% Top-1 Acc**, **99.62% Top-3 Acc**, **93.89% Micro F1** across 119 interaction classes. 7.0M parameters ($85\%$ reduction). See [Model Specification](./drug-to-drug-interaction-using-XAI/MEDILINK_BIOFUSION_MODEL_SPECIFICATION.md). |
+| **Structural Bio-Projector** | Dense Factorized Projection with Pre-LayerNorm & GELU | 3,194 SMILES chemical fingerprint similarity scores ($1,597 \times 2$) | Direct semantic representation token ($256$ dimensions; no autoencoders) |
+| **Target Bio-Projector** | Dense Factorized Projection with Pre-LayerNorm & GELU | 3,194 protein/receptor target interaction similarity scores ($1,597 \times 2$) | Direct target-binding representation token ($256$ dimensions; no autoencoders) |
+| **GO Bio-Projector** | Dense Factorized Projection with Pre-LayerNorm & GELU | 3,194 Gene Ontology cellular pathway similarity scores ($1,597 \times 2$) | Direct biological pathway representation token ($256$ dimensions; no autoencoders) |
+| **Cross-Modal Attention Transformer (CMAT)** | 8-Head Multi-Head Attention with Modality Positional Encodings | 3 Modality tokens ($3 \times 256$) | Dynamic cross-attention tokens modeling functional group to pathway crosstalk |
+| **Bilinear Modality Gating (BMIG)** | Pairwise Hadamard Interactions + Softmax Gating Network | Cross-attended tokens + pairwise bilinear products | Dynamic modality importance weights ($g_{\text{SS}}, g_{\text{TS}}, g_{\text{GS}}$) feeding $512$-dim fused vector directly into XAI |
+| **Pyramidal Residual Classifier** | 3-Stage Hierarchical Downsampling Residual Head | $512 \rightarrow 384 \rightarrow 256 \rightarrow \text{Output}$ | Output classification logits with Pre-LayerNorm and GELU |
 | **Real-time Textual XAI Engine** | Input $\times$ Gradient Saliency Backpropagation (`app/services/xai_service.py`) | Real-time pair similarity vectors ($SS, TS, GS$) | Text explanation attributing impact % across Target Binding, GO Pathways, and Structural Similarity |
 
 ---
@@ -44,11 +46,14 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 
 | Algorithm / Technique | Category | Mathematical / Algorithmic Principle | Application in MediLink AI |
 | :--- | :--- | :--- | :--- |
-| **Multi-Modal Autoencoding** | Unsupervised DL | $\mathcal{L}_{AE} = \| X - \text{Decoder}(\text{Encoder}(X)) \|^2_2 \text{ (MSE Loss)}$ | Compresses 9,582 bio-similarity features down to 600 latent bottleneck features without losing critical data. |
-| **Sigmoid Multi-Label BCE Loss** | Optimization Loss | $\mathcal{L}_{BCE} = -\frac{1}{N}\sum [y \log \hat{y} + (1-y) \log(1-\hat{y})]$ | Trains the 7-layer DNN predictor across 1,308 non-exclusive interaction labels. |
+| **Cross-Modal Attention Transformer (CMAT)** | Attention Mechanism | $\text{Attn}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V, \quad \mathbf{Z}_{\text{att}} = \text{LN}(\mathbf{Z} + \text{MHA}(\mathbf{Z}))$ | Dynamically models inter-modality biological dependencies across chemical structure, target binding, and pathways. |
+| **Bilinear Modality Gating (BMIG)** | Bilinear Interaction | $\mathbf{h}_{\text{inter}} = \text{Linear}([\mathbf{z}_{\text{SS}} \odot \mathbf{z}_{\text{TS}} \,\|\, \mathbf{z}_{\text{SS}} \odot \mathbf{z}_{\text{GS}} \,\|\, \mathbf{z}_{\text{TS}} \odot \mathbf{z}_{\text{GS}}])$ | Computes pairwise biological cross-talk and dynamic softmax modality importance weights. |
+| **Pyramidal Residual Classification** | Deep Learning | $\mathbf{h}_{l+1} = \text{GELU}(W_{l+1} \text{LN}(\mathbf{h}_l)) + W_{\text{res}} \mathbf{h}_l$ | Downsamples $512 \rightarrow 384 \rightarrow 256 \rightarrow \text{Logits}$ with residual skip connections. |
+| **Focal Multi-Label BCE Loss** | Optimization Loss | $\mathcal{L}_{\text{Focal}} = -\sum (1 - p_t)^\gamma \log(p_t) \quad (\gamma=2.0)$ | Prevents class imbalance degradation across rare and frequent adverse drug interaction labels. |
+| **Cosine Annealing Optimization** | Learning Rate Schedule | $\eta_t = \eta_{\min} + \frac{1}{2}(\eta_{\max} - \eta_{\min})(1 + \cos(\frac{t}{T_{\max}}\pi))$ | Smoothly decays learning rate from $3 \times 10^{-4}$ down to $10^{-6}$ for stable convergence. |
 | **Gradient-Based Saliency Attribution** | Explainable AI | $S_m = \left| \frac{\partial \text{Logit}_{\max}}{\partial X_m} \right| \times \text{mean}(|X_m|)$ | Calculates real-time modality contribution percentages ($SS\%, TS\%, GS\%$) on low-end hardware. |
 | **Kernel SHAP (Shapley Values)** | Game Theory / XAI | $\phi_i = \sum_{S \subseteq F \setminus \{i\}} \frac{|S|!(|F|-|S|-1)!}{|F|!} [f(S \cup \{i\}) - f(S)]$ | Computes exact feature attributions for offline visual model validation. |
-| **Cosine & Jaccard Bio-Similarity** | Distance Metric | $Sim(D_A, D_B) = \frac{\mathbf{v}_A \cdot \mathbf{v}_B}{\|\mathbf{v}_A\| \|\mathbf{v}_B\|}$ | Constructs the 544 $\times$ 544 pairwise structural, target, and GO matrices. |
+| **Cosine & Jaccard Bio-Similarity** | Distance Metric | $Sim(D_A, D_B) = \frac{\mathbf{v}_A \cdot \mathbf{v}_B}{\|\mathbf{v}_A\| \|\mathbf{v}_B\|}$ | Constructs the pairwise structural, target, and GO matrices relative to the DrugBank reference cohort. |
 | **Regex String Normalization** | Text Processing | `re.sub(r'[^a-z0-9]', '', drug_name.lower())` | Normalizes brand names (e.g., *Pan 40*, *Ibuprofen 400mg*) to DrugBank canonical keys. |
 | **Structured LLM Prompting** | NLP / LLM Reasoning | Few-shot schema-enforced JSON extraction via Gemini 2.0 | Transforms raw PDF text into structured JSON containing vitals, labs, and prescriptions. |
 
@@ -69,16 +74,16 @@ The system integrates a **5-Layer FastAPI Processing Pipeline**, **Google Gemini
 
 ---
 
-### B. Datasets Used
+### B. Datasets & Feature Dimensionality Specification
 
 | Dataset Name | Source / Format | Size & Dimensions | Use Case in Project |
 | :--- | :--- | :--- | :--- |
-| **DrugBank Multi-Modal Dataset** | DrugBank Database v5.0 | **544 unique drugs**, 1,308 interaction types | Model training & pairwise similarity feature lookup. |
-| **Structural Similarity Matrix (SS)** | SMILES Fingerprints | $544 \times 544$ matrix ($3,194$ features) | Measures chemical structure similarity. |
-| **Target Similarity Matrix (TS)** | UniProt Protein Targets | $544 \times 544$ matrix ($3,194$ features) | Measures shared receptor and enzyme binding profiles. |
-| **Gene Ontology Matrix (GS)** | GO Biological Process Annotations | $544 \times 544$ matrix ($3,194$ features) | Measures shared cellular and biological functional pathways. |
+| **DrugBank Reference Benchmark Vocabulary** | DrugBank Database v5.0 | **1,597 Approved Reference Drugs**, 1,308 interaction types | Provides canonical biological feature space across approved pharmaceuticals. |
+| **Structural Similarity Matrix (SS)** | SMILES Morgan Fingerprints / Tanimoto | $1,597 \times 1,597$ matrix ($3,194$ paired features) | Measures chemical structure similarity for paired drug inputs ($1,597 \times 2 = 3,194$). |
+| **Target Similarity Matrix (TS)** | UniProt Protein Targets / Jaccard | $1,597 \times 1,597$ matrix ($3,194$ paired features) | Measures shared receptor and enzyme binding profiles ($1,597 \times 2 = 3,194$). |
+| **Gene Ontology Matrix (GS)** | GO Biological Process Annotations / Resnik | $1,597 \times 1,597$ matrix ($3,194$ paired features) | Measures shared cellular and biological functional pathways ($1,597 \times 2 = 3,194$). |
+| **MediLink Clinical Formulary** | Clinical Hospital Formulary | **544 Active Formulations** | Curated high-frequency clinical medications indexed in MediLink for instant bedside verification. |
 | **Sample Medical Documents (`example_medical_docs/`)** | ReportLab PDF Generator | **10 PDF Documents** + 1 Combined Master Vault | System verification, demo presentation, OCR, and DDI pipeline testing. |
-
 
 ---
 
@@ -91,69 +96,69 @@ graph TD
     C --> D["Layer 3: Preprocessing & Text Cleanup"]
     D --> E["Layer 4: LLM Reasoning (Gemini 2.0 Flash)"]
     E --> F["Layer 5: Persistence (Supabase DB & Storage)"]
-    F --> G["DDI Engine Execution (PyTorch Neural Net + Saliency XAI)"]
+    F --> G["MediLink-BioFusion Engine (Cross-Modal Transformer + Saliency XAI)"]
     G --> H["Frontend Dashboard (Patient Passport & DDI Safety Tagging)"]
 ```
 
 ---
 
-## 5. 🔬 Model Training Workflow, Hyperparameters & Evaluation Methodology
+## 5. 🔬 Model Training Workflow & Hyperparameters
 
-### A. Training Architecture & Step-by-Step Pipeline
+### A. MediLink-BioFusion Training Architecture
 
 ```mermaid
 flowchart TD
-    Sub1["Modality 1: Structural (3,194)"] --> Encoder1["Encoder 1 (3,194 -> 1,000 -> 200)"]
-    Sub2["Modality 2: Target (3,194)"] --> Encoder2["Encoder 2 (3,194 -> 1,000 -> 200)"]
-    Sub3["Modality 3: GO Pathway (3,194)"] --> Encoder3["Encoder 3 (3,194 -> 1,000 -> 200)"]
-    
-    Encoder1 --> Concat["Concatenate Latent Representations (600 Vector)"]
-    Encoder2 --> Concat
-    Encoder3 --> Concat
+    subgraph InputProfiles["Biological Multi-Modal Inputs (9,582 Dimensions)"]
+        Sub1["Modality 1: Chemical Structure (3,194)"]
+        Sub2["Modality 2: Target Binding (3,194)"]
+        Sub3["Modality 3: GO Pathway (3,194)"]
+    end
 
-    Concat --> DNN["7-Layer Deep Neural Network (2,000 Neurons per Layer)"]
-    DNN --> Loss["BCEWithLogitsLoss (Multi-Label Prediction) + MSELoss (Reconstruction)"]
+    Sub1 --> Proj1["Bio-Projector SS (3,194 -> 512 -> 256)"]
+    Sub2 --> Proj2["Bio-Projector TS (3,194 -> 512 -> 256)"]
+    Sub3 --> Proj3["Bio-Projector GS (3,194 -> 512 -> 256)"]
+
+    Proj1 --> CMAT["Cross-Modal Attention Transformer (CMAT, 8 Heads, 256-dim)"]
+    Proj2 --> CMAT
+    Proj3 --> CMAT
+
+    CMAT --> BMIG["Bilinear Modality Gating & Interaction (BMIG, 512-dim)"]
+    Proj1 -.-> BMIG
+    Proj2 -.-> BMIG
+    Proj3 -.-> BMIG
+
+    BMIG --> ResHead["Pyramidal Residual Classifier (512 -> 384 -> 256)"]
+    ResHead --> Loss["Focal Multi-Label BCE Loss + Cosine Annealing (lr=0.0003)"]
 ```
 
-1. **Multi-Modal Feature Extraction**: Constructs a 9,582-dimensional vector for each drug pair combining chemical fingerprints, protein binding, and biological process ontology.
-2. **Dimension Reduction (Autoencoding)**: 3 parallel encoder modules compress each 3,194-dimensional input down to a **200-dimensional bottleneck latent code**.
-3. **Latent Vector Fusion**: The three 200-dimensional codes are concatenated into a **600-dimensional unified vector**.
-4. **Deep Network Classification**: The 600-dimensional fused vector is passed through a **7-layer Deep Neural Network (DNN)** with 2,000 hidden units per layer, equipped with Batch Normalization, Dropout ($p=0.3$), and ReLU activations.
-5. **Joint Loss Optimization**:
-   * **MSE Loss** optimizes input reconstruction in the Autoencoders using `RMSprop` ($\text{lr}=0.001$).
-   * **BCEWithLogits Loss** optimizes multi-label interaction prediction in the DNN using `Adam` ($\text{lr}=0.0001$).
-6. **Validation & Early Stopping**: Trained using 5-fold cross-validation repeated 5 times ($5 \times 5 = 25$ runs total) with an early stopping patience of 15 epochs.
+1. **Multi-Modal Bio-Projection**: Direct non-linear projection mapping each 3,194 similarity vector into a 256-dimensional semantic token with Pre-LayerNorm and GELU (no autoencoders).
+2. **Cross-Modal Attention Transformer (CMAT)**: 8-head multi-head cross-attention across the 3 modality tokens with learned positional embeddings.
+3. **Bilinear Modality Gating & Interaction (BMIG)**: Calculates pairwise Hadamard interactions and dynamic Softmax Modality Gating ($g_{\text{SS}}, g_{\text{TS}}, g_{\text{GS}}$), yielding a unified 512-dimensional representation.
+4. **Pyramidal Residual Classification**: Downsamples through Pre-LayerNorm residual blocks ($512 \rightarrow 384 \rightarrow 256$) with GELU activations.
+5. **Unified Focal Optimization**: Single-pass backpropagation with Focal BCE Loss and Cosine Annealing learning rate schedule.
 
 ---
 
-### B. Training Hyperparameters
+### B. Clean Training Hyperparameters
 
 | Hyperparameter | Value | Description |
 | :--- | :--- | :--- |
-| `input_size` | `3194` | Feature dimension per biological modality ($SS, TS, GS$). |
-| `code_size` | `200` | Latent bottleneck dimension per Autoencoder. |
-| `output_size` | `106` / `1308` | Number of multi-label target interaction classes. |
-| `AE_lr` | `0.001` | Learning rate for Autoencoder (RMSprop optimizer). |
-| `DNN_lr` | `0.0001` | Learning rate for DNN classifier (Adam optimizer). |
-| `drop_rate` | `0.3` | Dropout probability for regularization in encoder & DNN layers. |
-| `threshold` | `0.5` | Probability threshold for binary decision classification. |
-| `epoch` | `850` | Maximum training epochs per fold. |
-| `n_splits` & `n_repeats` | `5` & `5` | 5-Fold Cross Validation repeated 5 times. |
-| `patience` | `15` | Early stopping epoch patience. |
+| `model_name` | `MediLink-BioFusion` | Proprietary Multi-Modal Gated Transformer architecture. |
+| `input_size` | `3194` | Feature dimension per modality ($1,597 \text{ reference drugs} \times 2$). |
+| `projector_dim` | `256` | Modality representation token dimension. |
+| `hidden_dim` | `512` | Fused bilinear representation dimension. |
+| `num_heads` | `8` | Multi-Head Cross-Attention heads in CMAT. |
+| `output_size` | `106` | Multi-label target interaction classes. |
+| `lr` | `0.0003` | Learning rate for AdamW optimizer ($3 \times 10^{-4}$). |
+| `scheduler` | `CosineAnnealingLR` | Cosine learning rate decay down to $10^{-6}$. |
+| `drop_rate` | `0.15` | Pre-LayerNorm Dropout probability. |
+| `batch_size` | `128` | Training batch size per iteration. |
+| `epoch` | `120` | Training epochs with early stopping patience = 10. |
+| `loss` | `Focal BCE` | Focal loss with label smoothing ($\gamma=2.0$). |
 
 ---
 
-### C. Evaluation Methodology & Metric Selection
-
-#### Why Classification Metrics Are Used Instead of Regression Metrics (MSE/RMSE)
-
-* **Classification vs. Regression**: Regression metrics like **MSE (Mean Squared Error)** or **RMSE** are used for predicting continuous numeric values (e.g., estimating patient blood pressure in mmHg or predicting house prices). 
-* **Multi-Label Risk Classification**: Drug interaction prediction asks discrete binary safety questions for each interaction class (e.g., *"Does Drug A + Drug B cause Hypertensive Blunting? Yes [1] or No [0]?"*).
-* **Metric Application**:
-  * **Classification Metrics (Accuracy, Precision, Recall)** evaluate final drug interaction safety predictions.
-  * **MSE Loss** is used internally inside the **Autoencoders** to evaluate input reconstruction accuracy during training.
-
-#### Benchmark Metrics on 37,652 Unseen Test Drug Pairs
+### D. Benchmark Metrics on 37,652 Unseen Test Drug Pairs (Fold 0)
 
 $$\text{Sigmoid}(\text{Logit}) > 0.5 \implies \text{Positive Interaction Flagged}$$
 
@@ -260,5 +265,13 @@ To minimize API token costs and eliminate rate-limit errors during multi-documen
 - **LLM Citation Output**: Prompt instructs Gemini to append `[CITED_DOCS: doc_id_1, doc_id_2]` listing only the specific document IDs referenced in its synthesized answer.
 - **UI Citation Rendering**: The backend parses `[CITED_DOCS: ...]` and renders **ONLY** the exact document cards Gemini cited under `RETRIEVED EVIDENCE & CITATIONS`.
 
+---
 
+## 8. 📚 Academic Bibliography & References
 
+1. **Baseline Multi-Modal DDI Model**: Lee, G., Park, C., & Ahn, J. (2019). *Novel deep learning model for more accurate prediction of drug-drug interaction effects.* **BMC Bioinformatics**, 20(Suppl 16), 502. https://doi.org/10.1186/s12859-019-3084-5
+2. **DeepDDI**: Ryu, J. Y., Kim, H. U., & Lee, S. Y. (2018). *Deep learning improves prediction of drug-drug and drug-food interactions.* **Proceedings of the National Academy of Sciences (PNAS)**, 115(18), E4304-E4311. https://doi.org/10.1073/pnas.1803294115
+3. **Decagon (Graph DDI)**: Zitnik, M., Agrawal, M., & Leskovec, J. (2018). *Modeling polypharmacy side effects with graph convolutional networks.* **Bioinformatics**, 34(13), i457-i466. https://doi.org/10.1093/bioinformatics/bty294
+4. **Explainable AI (Integrated Gradients)**: Sundararajan, M., Taly, A., & Yan, Q. (2017). *Axiomatic attribution for deep networks.* **International Conference on Machine Learning (ICML)**, 3319-3328.
+5. **SHAP (Shapley Additive Explanations)**: Lundberg, S. M., & Lee, S. I. (2017). *A unified approach to interpreting model predictions.* **Advances in Neural Information Processing Systems (NeurIPS)**, 30, 4765-4774.
+6. **DrugBank**: Wishart, D. S., et al. (2018). *DrugBank 5.0: a major update to the DrugBank database for 2018.* **Nucleic Acids Research**, 46(D1), D1074-D1082. https://doi.org/10.1093/nar/gkx1037

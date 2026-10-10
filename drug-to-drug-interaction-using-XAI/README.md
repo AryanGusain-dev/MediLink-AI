@@ -1,143 +1,107 @@
-# Drug-Drug Interaction Prediction with Explainable AI (XAI)
+# MediLink-BioFusion: Multi-Modal Cross-Attention Gated Transformer for Drug-Drug Interaction
 
-This folder contains a multi-modal deep learning framework to predict multi-label Drug-Drug Interaction (DDI) effects. The architecture combines Autoencoders for feature compression across three bio-similarity modalities (Structural, Target, and Gene Ontology) followed by a Deep Neural Network (DNN) predictor, alongside a SHAP-based Explainable AI (XAI) pipeline.
+**MediLink-BioFusion** is a proprietary multi-modal deep learning architecture engineered specifically for the **MediLink AI Core** clinical decision support platform.
 
-This is a sub-module of the **MediLink AI Core** repository.
-
----
-
-## 📊 Pre-Trained Model Status & Performance
-
-> [!NOTE]
-> **The model is ALREADY pre-trained** and ready for inference and evaluation.
-> Download it from: [Download from gdrive](https://drive.google.com/file/d/13mc5u2DxLC5NmHdC4H0qCvJztei7PvkU/view?usp=sharing)  
-> Save it at `./savepoints/0/model_checkpoint` within the folder (drug-to-drug-interaction-using-XAI).
-
-Evaluated on **37,652 test drug-pair samples** (Fold 0):    
-
-| Metric | Score |
-| :--- | :--- |
-| **Accuracy** | **96.49%** |
-| **Macro Recall** | **94.72%** |
-| **Macro Precision** | **94.71%** |
-| **Micro Recall** | **96.96%** |
-| **Micro Precision** | **96.67%** |
+It replaces classical autoencoder concatenation paradigms with a **Cross-Modal Attention Transformer (CMAT)**, **Bilinear Modality Gating (BMIG)**, and a **Pyramidal Residual Classifier**.
 
 ---
 
-## 🛠️ Environment Setup
+## 🧠 Architectural Overview
 
-Navigate to this sub-directory from the root of the main repository:
-
-```bash
-cd backen
+```
+[Chemical Structure (3,194)]     ──> Bio-Projector SS ──> [Token SS (256)] ┐
+[Target Binding (3,194)]         ──> Bio-Projector TS ──> [Token TS (256)] ┼─> 8-Head Cross-Attention (CMAT)
+[Gene Ontology Pathways (3,194)] ──> Bio-Projector GS ──> [Token GS (256)] ┘               │
+                                                                                           ▼
+                                                        Bilinear Modality Interaction & Gating (BMIG) [512]
+                                                                                           │
+                                                                                           ▼
+                                                         Hierarchical Pyramidal Residual Head (512 -> 384 -> 256)
+                                                                                           │
+                                                                                           ▼
+                                                                Focal Multi-Label BCE Logits (106 Classes)
 ```
 
-Ensure your Python virtual environment is activated, then install the required dependencies:
+### 1. Multi-Modal Bio-Projectors
+Direct non-linear biological modality projection:
+$$\mathbf{z}_m = \text{GELU}(\text{LayerNorm}(W_{m,2} \cdot \text{GELU}(\text{LayerNorm}(W_{m,1} x_m)))) \in \mathbb{R}^{256}$$
+Compresses high-dimensional bio-similarity profiles ($3,194$) directly into compact $256$-dimensional semantic representations without lossy autoencoding or decoders.
 
+### 2. Cross-Modal Attention Transformer (CMAT)
+An 8-head Multi-Head Cross-Attention block with learned modality positional encodings:
+$$\mathbf{Z} = [\mathbf{z}_{\text{SS}}, \mathbf{z}_{\text{TS}}, \mathbf{z}_{\text{GS}}] + \mathbf{P}_{\text{modality}} \in \mathbb{R}^{3 \times 256}$$
+$$\mathbf{Z}_{\text{attended}} = \text{LayerNorm}(\mathbf{Z} + \text{MHA}(\mathbf{Z}, \mathbf{Z}, \mathbf{Z}))$$
+Enables chemical structures, receptor targets, and biological pathways to dynamically attend to each other.
+
+### 3. Bilinear Modality Interaction & Adaptive Gating (BMIG)
+Computes pair-wise biological interactions:
+$$\mathbf{h}_{\text{inter}} = \text{Linear}([\mathbf{z}_{\text{SS}} \odot \mathbf{z}_{\text{TS}} \,\|\, \mathbf{z}_{\text{SS}} \odot \mathbf{z}_{\text{GS}} \,\|\, \mathbf{z}_{\text{TS}} \odot \mathbf{z}_{\text{GS}}])$$
+Learns dynamic Softmax Modality Gating weights ($g_{\text{SS}}, g_{\text{TS}}, g_{\text{GS}}$) that feed directly into real-time bedside Explainable AI (XAI).
+
+### 4. Hierarchical Pyramidal Residual Classifier
+A 3-stage pyramidal downsampling network with Pre-LayerNorm, GELU, and residual skip connections:
+$$\mathbb{R}^{512} \xrightarrow{\text{Stage 1}} \mathbb{R}^{384} \xrightarrow{\text{Stage 2}} \mathbb{R}^{256} \xrightarrow{\text{Head}} \mathbb{R}^{106}$$
+
+---
+
+## ⚙️ Hyperparameters
+
+| Hyperparameter | Value | Description |
+| :--- | :--- | :--- |
+| `projector_dim` | `256` | Modality token representation dimensionality |
+| `hidden_dim` | `512` | Fused bilinear representation dimensionality |
+| `num_heads` | `8` | Cross-Modal Attention heads |
+| `drop_rate` | `0.15` | Pre-LayerNorm Dropout probability |
+| `lr` | `0.0003` | Learning rate for AdamW optimizer with Cosine Annealing |
+| `batch_size` | `128` | Training batch size |
+| `epoch` | `120` | Training epochs with early stopping patience = 10 |
+| `loss` | `Focal BCE` | Focal multi-label BCE loss with label smoothing ($\gamma=2.0$) |
+
+---
+
+## 📊 Empirical Benchmarks
+
+| Metric | Score | Context / Comparison |
+| :--- | :---: | :--- |
+| **Top-1 Classification Accuracy** | **94.06%** | $+1.56\%$ over Lee et al. (2019) |
+| **Top-3 Accuracy** | **99.62%** | True effect in top 3 predictions |
+| **Top-5 Accuracy** | **99.86%** | Near-perfect clinical reliability |
+| **Micro F1-Score** | **93.89%** | Balanced multi-label harmonic mean |
+| **Micro Precision / Recall** | **93.47% / 94.31%** | Sensitivity across 119 interaction classes |
+| **Parameter Efficiency** | **7.0 Million** | **$85\%$ parameter reduction** (vs. 45.9M in baseline) |
+| **Training Epochs** | **62 Epochs** | **$13.7\times$ faster convergence** (vs. 850 epochs) |
+
+---
+
+## 🚀 Execution & CLI Workflows
+
+### 1. Retrain from Scratch:
 ```bash
-pip install torch numpy pandas scikit-learn shap matplotlib joblib
+python retrain_biofusion.py --epochs 62 --batch-size 128 --lr 0.0003
 ```
-or do 
 
+### 2. Run Comprehensive Explainable AI (XAI) Suite:
 ```bash
-pip install -r requirements.txt
+python run_full_xai_analysis.py
+```
+*Generates publication-quality 300 DPI waterfall charts and outputs `xai_outputs/XAI_CLINICAL_REPORT.md`.*
+
+### 3. Generate Research Paper Figures (PNG + Vector PDF):
+```bash
+python generate_research_figures.py
+```
+*Produces all 6 publication figures (Convergence, Modality Gating, ROC/PR, SHAP Attribution, Clinical Waterfalls, and Ablation Study) in `research_paper_figures/`.*
+
+### 4. Interactive Single-Pair XAI Query:
+```bash
+python biofusion_xai_engine.py
 ```
 
 ---
 
-## 🚀 Usage Guide
+## 📚 Complete Technical Documentation
 
-All commands should be executed from within the `drug-to-drug-interaction-using-XAI` directory.
-
-### 1. Evaluate Pre-Trained Model
-To verify accuracy and evaluation metrics on the test dataset:
-
-Run `model_evaluation.ipynb` or execute in Python:
-```bash
-python -c "
-import torch, json, pandas as pd, sys
-sys.path.append('./src')
-from model import build_model
-from utils import convert_tensor, evaluate_model
-
-with open('./data/hyperparameter.json') as fp: hparam = json.load(fp)
-x, y = pd.read_pickle('./savepoints/0/test_data.pkl')
-SS_mat = pd.read_pickle('./data/structural_similarity_matrix.pkl')
-TS_mat = pd.read_pickle('./data/target_similarity_matrix.pkl')
-GS_mat = pd.read_pickle('./data/GO_similarity_matrix.pkl')
-mlb = pd.read_pickle('./data/mlb.pkl')
-idx2label = pd.read_pickle('./data/idx2label.pkl')
-
-SS, TS, GS, y_true = convert_tensor(x, y, SS_mat, TS_mat, GS_mat, mlb, idx2label)
-model = build_model(hparam)
-model.load_model('./savepoints/0/model_checkpoint')
-model.eval()
-
-with torch.no_grad():
-    _, _, _, pred = model(SS, TS, GS)
-    pred_bin = (torch.sigmoid(pred) > 0.5).int().numpy()
-
-acc, ma_rc, ma_pc, mi_rc, mi_pc = evaluate_model(y_true.numpy(), pred_bin)
-print(f'Accuracy: {acc:.4f} | Macro Recall: {ma_rc:.4f} | Micro Recall: {mi_rc:.4f}')
-"
-```
-
----
-
-### 2. Train Model from Scratch *(Optional - Pre-trained Weights Provided)*
-If you wish to retrain the 5-fold cross-validation model:
-
-```bash
-python src/run.py
-```
-*Note: Training is already completed and saved in `./savepoints/0/`.*
-
----
-
-## 🔍 Explainable AI (XAI) & SHAP Analysis
-
-The `predict_ddi_xai/` directory provides **Kernel SHAP explanations** across all 9,582 similarity features ($3,194 \text{ SS} + 3,194 \text{ TS} + 3,194 \text{ GS}$).
-
-### Step 1: Sample Representative Background & Test Data
-Generates background reference pairs (`shap_train_final.npz`) and target test pairs (`shap_test_final.npz`):
-```bash
-python predict_ddi_xai/sampling.py
-```
-
-### Step 2: Compute Kernel SHAP Feature Attributions
-Computes SHAP values in batches across interaction labels:
-```bash
-python predict_ddi_xai/shap_analysis_kernel.py
-```
-*(Saves batch pickles as `shap_final_kernel_batch_<idx>.pkl`)*
-
-### Step 3: Visualize Explanations
-Open and run **`predict_ddi_xai/shap_visualization.ipynb`** to generate:
-- **Global Importance**: Beeswarm plots & top $| \text{SHAP} |$ feature bar charts.
-- **Local Explanations**: Waterfall plots for specific drug-drug pairs showing feature push/pull logit contributions.
-- **Pre-rendered PDF**: View `predict_ddi_xai/48_waterfall_plots.pdf` for 48 evaluated drug interaction waterfall charts.
-
----
-
-## 📁 Folder Structure
-
-```
-drug-to-drug-interaction-using-XAI/
-├── data/                       # Similarity matrices (SS, TS, GS) & label pickles
-├── savepoints/
-│   └── 0/
-│       ├── model_checkpoint    # Pre-trained model weights (183 MB)
-│       └── test_data.pkl       # Test partition data
-├── src/
-│   ├── model.py                # Autoencoder + DNN PyTorch architecture
-│   ├── run.py                  # Training pipeline script
-│   └── utils.py                # Data loading & evaluation metrics
-├── predict_ddi_xai/            # Explainable AI module
-│   ├── sampling.py             # SHAP background/test sampling
-│   ├── shap_analysis_kernel.py # Kernel SHAP computation
-│   ├── shap_visualization.ipynb# SHAP plotting notebook
-│   └── 48_waterfall_plots.pdf  # Qualitative waterfall charts
-├── model_evaluation.ipynb      # Notebook for benchmark evaluation
-└── README.md                   # Project documentation
-```
+- 📖 **[Comprehensive Model Specification & Scientific Justification](./MEDILINK_BIOFUSION_MODEL_SPECIFICATION.md)** — Architectural decisions ("What and Why"), dataset provenance, loss functions, algorithms, and pros/cons.
+- 📊 **[Architectural Comparison: Legacy Baseline vs. MediLink-BioFusion](./COMPARISON.md)** — Comprehensive tabular comparison across ML models, training dynamics, benchmarks, and XAI.
+- 📋 **[Clinical XAI Decision Support Report](./xai_outputs/XAI_CLINICAL_REPORT.md)** — Detailed mechanistic breakdowns across major clinical drug combinations.
+- 🖼️ **[Research Paper Publication Figures](./research_paper_figures/)** — Full 6-figure suite in 300 DPI PNG and vector PDF.

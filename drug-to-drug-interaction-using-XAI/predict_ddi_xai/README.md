@@ -1,15 +1,38 @@
-# SHAP-Based Explainability for Drug-Drug Interaction Prediction
+# MediLink-BioFusion: Advanced Explainable AI (XAI) Suite
 
-This directory contains the Kernel SHAP Explainable AI (XAI) analysis pipeline for the MediLink AI Multi-Modal Drug-Drug Interaction (DDI) deep learning model.
+This directory contains the Explainable AI (XAI) framework for the **MediLink-BioFusion Multi-Modal Cross-Attention Gated Transformer** model.
 
-## 🛠️ Module Workflow Components
+It replaces classical black-box perturbation with a **Dual-Stream XAI Framework**:
 
-1. **`sampling.py`**: Generates representative input samples used as background and evaluation data for the SHAP Kernel Explainer.
-2. **`shap_analysis_kernel.py`**: Runs the Kernel SHAP Explainer across interaction labels to compute feature attributions across Structural, Target, and Gene Ontology similarity features.
-3. **`shap_visualization.ipynb`**: Generates global importance plots (bar, beeswarm) and local explanation plots (waterfall charts) of SHAP results.
-4. **`48_waterfall_plots.pdf`**: Pre-rendered qualitative waterfall charts for 48 evaluated drug interaction pairs.
+---
 
-## 📌 Implementation Notes
+## 🔬 Novel XAI Architectural Methodology
 
-* All SHAP computations use **Kernel SHAP**, which is model-agnostic and well-suited for high-dimensional multi-modal similarity profiles (9,582 features).
-* Local explanations break down the positive and negative logit contributions of each feature to explain specific drug interaction predictions.
+1. **Architectural Intrinsic Explainability**:
+   * **Dynamic Modality Gating**: Directly extracts the Softmax gate weights ($g_{\text{SS}}, g_{\text{TS}}, g_{\text{GS}}$) from the Bilinear Modality Gating layer (`BMIG`), revealing how much the network relies on Chemical Structure vs. Target Binding vs. Gene Ontology.
+   * **Cross-Modal Attention Maps**: Multi-head attention matrices ($3 \times 3$) revealing cross-talk between functional chemical groups and cellular pathways.
+
+2. **Path-Integral Integrated Gradients (*Sundararajan et al., ICML 2017*)**:
+   * Axiomatically justified path integrals across all 9,582 biological similarity dimensions relative to a biologically grounded zero-similarity baseline.
+
+3. **Biological Entity Grounding**:
+   * Maps numerical feature indices directly back to canonical **DrugBank reference drugs and protein targets**, eliminating uninterpretable feature numbers.
+
+4. **Multi-Modal Clinical Waterfall Attributions**:
+   * Decomposes the final prediction risk into additive biological stages ($\text{Baseline} \rightarrow \Delta_{\text{SS}} \rightarrow \Delta_{\text{TS}} \rightarrow \Delta_{\text{GS}} \rightarrow \text{Final Risk}$).
+
+---
+
+## 📁 Key Components
+
+* **`biofusion_xai_engine.py`**: Standalone production XAI engine with Integrated Gradients, Modality Gating, Entity Grounding, and 300 DPI plotting.
+* **`run_full_xai_analysis.py`**: Automated clinical evaluation across benchmark drug pairs.
+* **`xai_outputs/`**: Generated 300 DPI publication waterfall plots and clinical markdown reports.
+* **`research_paper_figures/`**: Full 6-figure publication-ready figures suite (both PNG and vector PDF).
+
+---
+
+## 📚 Technical Documentation
+
+- 📖 **[MediLink-BioFusion Model Specification](../MEDILINK_BIOFUSION_MODEL_SPECIFICATION.md)** — Architectural decisions ("What and Why"), dataset provenance, loss functions, algorithms, and pros/cons.
+- 📊 **[Architectural Comparison: Legacy Baseline vs. MediLink-BioFusion](../COMPARISON.md)** — Comprehensive tabular comparison across ML models, training dynamics, benchmarks, and XAI suite.

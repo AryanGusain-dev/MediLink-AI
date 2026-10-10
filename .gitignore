@@ -73,6 +73,8 @@ drug-to-drug-interaction-using-XAI/savepoints/0/model_checkpoint
 venv/
 .venv/
 env/
+env
+*.zip
 
 # Python Cache
 **/__pycache__/

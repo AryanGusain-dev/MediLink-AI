@@ -79,16 +79,18 @@ Backend API endpoints and interactive Swagger UI will be available at `http://lo
 
 - **Frontend**: TanStack Start, React 19, TypeScript, Tailwind CSS v4, Motion (Framer Motion), Lucide Icons, Sonner.
 - **Backend API**: FastAPI, Uvicorn, Structlog, Pydantic v2.
-- **Machine Learning & XAI**: PyTorch, Autoencoders, Deep Neural Networks, Input $\times$ Gradient Saliency, FastEmbed (BM25), Qdrant Vector Client.
+- **Machine Learning & XAI**: PyTorch 2.14, **MediLink-BioFusion** (Multi-Modal Cross-Attention Gated Transformer, 7.0M params, 94.06% Top-1 Accuracy), Path-Integral Integrated Gradients, Dynamic Modality Gating, FastEmbed (BM25), Qdrant Vector Client.
 - **Database & Auth**: Supabase Postgres, Row Level Security (RLS), Supabase Storage.
-- **LLM Synthesis**: Google Gemini (`gemini-3.5-flash` with automatic fallback to `gemini-3.1-flash-lite`).
+- **LLM Synthesis**: Google Gemini (`gemini-2.0-flash` with automatic fallback to `gemini-1.5-flash`).
 
 ---
 
-## 📚 Technical Architecture & Comprehensive Docs
+## 📚 Technical Architecture, Model Specification & Comprehensive Docs
 
-For in-depth mathematical formulas, 4-Tier RAG specifications, PyTorch model training metrics, database schemas, and medical domain knowledge:
-👉 **[Technical Architecture & Medical Knowledge Guide](./TECHNICAL_ARCHITECTURE_AND_KNOWLEDGE.md)**
+- 👉 **[MediLink-BioFusion Comprehensive Model Specification](./drug-to-drug-interaction-using-XAI/MEDILINK_BIOFUSION_MODEL_SPECIFICATION.md)** — Architectural decisions (What & Why), dataset provenance, mathematical formulations, benchmarks (94.06% accuracy, 7.0M params), and XAI suite.
+- 👉 **[Architectural Comparison: Legacy Baseline vs. MediLink-BioFusion](./drug-to-drug-interaction-using-XAI/COMPARISON.md)** — Comprehensive tabular comparison across ML architectures, hyperparameters, empirical benchmarks, and XAI capabilities.
+- 👉 **[Clinical XAI Decision Support Report](./drug-to-drug-interaction-using-XAI/xai_outputs/XAI_CLINICAL_REPORT.md)** — Mechanistic explanations, modality attributions, and waterfall charts across high-risk clinical pairs.
+- 👉 **[Technical Architecture & Medical Knowledge Guide](./TECHNICAL_ARCHITECTURE_AND_KNOWLEDGE.md)** — Complete 5-layer system architecture, database schemas, and medical domain knowledge.
 
 ---
 

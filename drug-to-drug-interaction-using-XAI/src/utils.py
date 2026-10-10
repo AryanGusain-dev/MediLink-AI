@@ -7,8 +7,16 @@ from sklearn.metrics import recall_score, precision_score, accuracy_score
 
 import os
 
-def index_data():    
-    path = './data/drugPair2effect_idx.pkl' if os.path.exists('./data/drugPair2effect_idx.pkl') else '../data/drugPair2effect_idx.pkl'
+def index_data(data_dir=None):    
+    if data_dir is not None and os.path.exists(os.path.join(data_dir, 'drugPair2effect_idx.pkl')):
+        path = os.path.join(data_dir, 'drugPair2effect_idx.pkl')
+    elif os.path.exists('./data/drugPair2effect_idx.pkl'):
+        path = './data/drugPair2effect_idx.pkl'
+    elif os.path.exists('../data/drugPair2effect_idx.pkl'):
+        path = '../data/drugPair2effect_idx.pkl'
+    else:
+        cur_file_dir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(os.path.dirname(cur_file_dir), 'data', 'drugPair2effect_idx.pkl')
     drugPair2effect = pd.read_pickle(path)
 
     y_all = list(drugPair2effect.values())
